@@ -1,0 +1,7 @@
+GPT BLE Manager
+
+This project was developed with Blue Falcon as a reference:
+https://github.com/Reedyuk/blue-falcon
+Copyright Andrew Reed and Blue Falcon contributors, Apache License 2.0.
+The Gradle wrapper files and Apache-2.0 license were copied from that project.
+The BLE API and platform implementations in this project are new implementations.

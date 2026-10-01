@@ -1,0 +1,25 @@
+package dev.gpt.ble
+
+/** Canonical Bluetooth UUID; accepts SIG 16/32-bit or full 128-bit UUIDs. */
+@ConsistentCopyVisibility
+data class BleUuid private constructor(val value: String) {
+    override fun toString(): String = value
+
+    companion object {
+        fun parse(value: String): BleUuid {
+            val input = value.trim().lowercase().removePrefix("0x")
+            val full =
+                when (input.length) {
+                    4 -> "0000$input-0000-1000-8000-00805f9b34fb"
+                    8 -> "$input-0000-1000-8000-00805f9b34fb"
+                    else -> input
+                }
+            require(
+                Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").matches(full)
+            ) {
+                "Invalid Bluetooth UUID: $value"
+            }
+            return BleUuid(full)
+        }
+    }
+}
