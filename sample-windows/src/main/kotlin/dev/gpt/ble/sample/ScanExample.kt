@@ -8,12 +8,11 @@ import dev.gpt.ble.ScanOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Пример объединяет advertising и системные имена через публичный API. Listener запускается в том
@@ -58,19 +57,16 @@ internal suspend fun CoroutineScope.findDevice(
             if ("--direct" in args) {
                 BleDevice(requireNotNull(target), addressType = AddressType.Public)
             } else if (target == null) {
-                delay(15_000)
+                delay(15_000.milliseconds)
                 null
             } else {
-                withTimeoutOrNull(30_000) {
-                    manager.devices
-                        .map { list ->
-                            list.firstOrNull {
-                                it.name?.contains(target, ignoreCase = true) == true ||
-                                    it.address.equals(target, true)
-                            }
+                withTimeoutOrNull(30_000.milliseconds) {
+                    manager.devices.mapNotNull { list ->
+                        list.firstOrNull {
+                            it.name?.contains(target, ignoreCase = true) == true ||
+                                it.address.equals(target, true)
                         }
-                        .filterNotNull()
-                        .first()
+                    }.first()
                 }
             }
         } finally {

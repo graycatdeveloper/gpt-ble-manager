@@ -11,6 +11,7 @@ import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Never start a second request while a timed-out platform callback can satisfy it. */
 internal class OperationQueue(private val onAbort: (BleException) -> Unit) {
@@ -27,7 +28,7 @@ internal class OperationQueue(private val onAbort: (BleException) -> Unit) {
             throw stopped.await()
         }
         try {
-            withTimeout(timeoutMillis) {
+            withTimeout(timeoutMillis.milliseconds) {
                 coroutineScope {
                     val operation = async { block() }
                     select {

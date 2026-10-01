@@ -1,4 +1,4 @@
-@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@file:OptIn(ExperimentalCoroutinesApi::class)
 
 package dev.gpt.ble
 
@@ -18,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.milliseconds
 
 class OperationQueueTest {
     @Test
@@ -27,7 +28,7 @@ class OperationQueueTest {
         val first = async {
             queue.execute(1000) {
                 events += "first start"
-                delay(50)
+                delay(50.milliseconds)
                 events += "first end"
                 1
             }

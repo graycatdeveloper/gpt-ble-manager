@@ -1,11 +1,11 @@
 [versions]
 kotlin = "2.4.20"
-agp = "9.1.1"
+agp = "9.4.1"
 kotlinx-coroutines = "1.11.0"
 ble-manager = "0.2.3-local"
-android-compileSdk = "36"
+android-compileSdk = "37"
 android-minSdk = "26"
-jdk = "17"
+jdk = "21"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

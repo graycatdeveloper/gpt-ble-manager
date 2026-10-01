@@ -5,6 +5,7 @@ import dev.gpt.ble.BleException
 import dev.gpt.ble.PairingState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Waits for a completed OS bond change; a successful start is not a successful pairing. */
 internal class BondOperation(private val target: PairingState) {
@@ -52,7 +53,7 @@ internal class BondOperation(private val target: PairingState) {
             if (state() == target) {
                 return true
             }
-            return withTimeoutOrNull(timeoutMillis) {
+            return withTimeoutOrNull(timeoutMillis.milliseconds) {
                 while (true) {
                     val next = events.receive()
                     if (next == target) {

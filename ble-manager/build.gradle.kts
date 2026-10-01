@@ -10,6 +10,7 @@ plugins {
 val onWindows = System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
 val nativeResources = layout.buildDirectory.dir("generated/windowsResources")
 val buildWindowsNative = tasks.register<BuildWindowsNative>("buildWindowsNative") {
+    description = "Build Windows Native"
     onlyIf { onWindows }
     sourceDirectory.set(layout.projectDirectory.dir("src/windowsMain/cpp"))
     buildDirectory.set(layout.buildDirectory.dir("cmake"))

@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
 }
 val libraryVersion = libs.versions.ble.manager.get()
+
 allprojects {
     group = "dev.gpt.ble"
     version = libraryVersion
