@@ -97,7 +97,7 @@ class ScanStoreTest {
 
     @Test
     fun uuidFormsNormalizeToSameValue() {
-        assertEquals(BleUuid.parse("180F"), BleUuid.parse("0000180f-0000-1000-8000-00805f9b34fb"))
+        assertEquals(BleUuid.parse("180F"), BleUuid.parse("0000180f-${BleUuid.SUFFIX}"))
         assertEquals(BleUuid.parse("0x180f"), BleUuid.parse("0000180f"))
         assertFailsWith<IllegalArgumentException> { BleUuid.parse("xyz") }
     }

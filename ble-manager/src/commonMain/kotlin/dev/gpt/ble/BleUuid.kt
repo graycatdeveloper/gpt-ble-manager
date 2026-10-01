@@ -3,15 +3,19 @@ package dev.gpt.ble
 /** Canonical Bluetooth UUID; accepts SIG 16/32-bit or full 128-bit UUIDs. */
 @ConsistentCopyVisibility
 data class BleUuid private constructor(val value: String) {
+
     override fun toString(): String = value
 
     companion object {
+
+        internal const val SUFFIX = "0000-1000-8000-00805f9b34fb"
+
         fun parse(value: String): BleUuid {
             val input = value.trim().lowercase().removePrefix("0x")
             val full =
                 when (input.length) {
-                    4 -> "0000$input-0000-1000-8000-00805f9b34fb"
-                    8 -> "$input-0000-1000-8000-00805f9b34fb"
+                    4 -> "0000$input-$SUFFIX"
+                    8 -> "$input-$SUFFIX"
                     else -> input
                 }
             require(
