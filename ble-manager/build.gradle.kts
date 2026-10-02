@@ -21,6 +21,7 @@ val buildWindowsNative = tasks.register<BuildWindowsNative>("buildWindowsNative"
 }
 
 kotlin {
+    withSourcesJar(publish = true)
     jvmToolchain(libs.versions.jdk.get().toInt())
     android {
         namespace = "dev.gpt.ble"
@@ -40,7 +41,28 @@ kotlin {
     }
 }
 tasks.named("windowsProcessResources") { dependsOn(buildWindowsNative) }
-publishing.publications.withType<MavenPublication>().configureEach {
+/*publishing.publications.withType<MavenPublication>().configureEach {
     artifactId = if (name == "kotlinMultiplatform") "gpt-ble-manager" else "gpt-ble-manager-${name.lowercase()}"
     pom { name.set("GPT BLE Manager"); description.set("Kotlin Multiplatform BLE client for Windows and Android") }
+}*/
+publishing {
+    // Ваша текущая конфигурация переименования artifactId
+    publications.withType<MavenPublication>().configureEach {
+        artifactId = if (name == "kotlinMultiplatform")
+            "gpt-ble-manager"
+        else
+            "gpt-ble-manager-${name.lowercase()}"
+        pom {
+            name.set("GPT BLE Manager")
+            description.set("Kotlin Multiplatform BLE client for Windows and Android")
+        }
+    }
+    // Добавляем локальную папку libs в качестве целевого репозитория
+    repositories {
+        maven {
+            // Укажите путь к папке libs внутри вашего клиентского приложения
+            // Например, если они лежат в одной папке: ../Имя_Проекта_Приложения/libs
+            url = uri("../../mentaris-api/local-repo")
+        }
+    }
 }

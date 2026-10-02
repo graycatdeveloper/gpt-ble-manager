@@ -14,7 +14,7 @@ plugins {
 
 dependencyResolutionManagement {
     repositories {
-        google();
+        google()
         mavenCentral()
     }
 }
