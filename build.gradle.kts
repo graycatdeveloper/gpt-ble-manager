@@ -3,9 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
 }
+
 val libraryVersion = libs.versions.ble.manager.get()
 
 allprojects {
-    group = "dev.gpt.ble"
+    group = "gpt.ble.manager"
     version = libraryVersion
 }

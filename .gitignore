@@ -6,3 +6,11 @@
 **/out/
 local.properties
 *.iml
+**/cmake-build-*/
+**/CMakeFiles/
+**/CMakeCache.txt
+*.bak
+*.bak.zip
+local-repo/
+.DS_Store
+Thumbs.db

@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm);
+    alias(libs.plugins.kotlin.jvm)
     application
 }
 
@@ -8,9 +8,9 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":ble-manager"))
+    implementation(project(":gpt-ble-manager"))
 }
 
 application {
-    mainClass.set("dev.gpt.ble.sample.MainKt")
+    mainClass.set("gpt.ble.manager.sample.MainKt")
 }
