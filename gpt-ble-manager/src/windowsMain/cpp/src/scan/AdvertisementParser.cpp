@@ -15,7 +15,7 @@ std::vector<std::wstring> advertisedServiceUuids(BluetoothLEAdvertisement const&
     {
         uuids.push_back(uuid(item));
     }
-    // Service Data содержит UUID даже при отсутствии отдельного списка ServiceUuids.
+    // Service Data contains a UUID even when there is no separate ServiceUuids list.
     for (auto const& section : advertisement.DataSections())
     {
         const auto type = section.DataType();

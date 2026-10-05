@@ -10,10 +10,10 @@
 #include "state/Registry.hpp"
 
 /**
- * Единственная экспортируемая поверхность DLL: имена и сигнатуры NativeBridge.kt.
- * Каждая функция явно инициализирует поток, вызывает модуль и переводит исключение.
- * Значение в catch — исходный JNI fallback, а не признак успеха: Java уже имеет exception.
- * Здесь нет макросов BEGIN/END, скрывающих границы try/catch.
+ * The DLL's only exported interface: the names and signatures declared in NativeBridge.kt. Each
+ * function explicitly initializes the thread, calls its module, and translates exceptions. The
+ * catch return value is the original JNI fallback, not a success indication: Java already has a
+ * pending exception. No BEGIN/END macros hide the try/catch boundaries.
  *
  * @see https://docs.oracle.com/en/java/javase/17/docs/specs/jni/design.html#resolving-native-method-names
  */

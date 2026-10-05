@@ -1,9 +1,9 @@
 package gpt.ble.manager
 
 /**
- * Фильтры применяются после объединения всех источников имени и рекламных данных. namePrefix
- * сравнивается с учётом регистра. Пустой набор UUID не ограничивает поиск. includeKnownDevices
- * добавляет системные записи, даже если свежего пакета ещё не было.
+ * Filters are applied after merging all name sources and advertising data. namePrefix is
+ * case-sensitive. An empty UUID set does not restrict scanning. includeKnownDevices adds system
+ * records even when no recent packet has arrived.
  */
 data class ScanOptions(
     val serviceUuids: Set<BleUuid> = emptySet(),
@@ -13,8 +13,8 @@ data class ScanOptions(
 )
 
 /**
- * Состояние текущего сканирования. nameResolutionError относится только к дополнительному источнику
- * системных имён и не подменяет ошибку основного advertising-сканера.
+ * Current scan state. nameResolutionError applies only to the supplementary system-name source and
+ * does not replace the primary advertisement scanner's error.
  */
 data class ScanState(
     val scanning: Boolean = false,

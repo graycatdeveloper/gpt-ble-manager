@@ -1,8 +1,8 @@
 package gpt.ble.manager
 
 /**
- * Доступность адаптера для BLE-операций. Closed — окончательное состояние менеджера. Порядок
- * значений сохранён; native status переводится явно платформенным менеджером.
+ * Adapter availability for BLE operations. Closed is the manager's terminal state. The value order
+ * is preserved; the platform manager explicitly maps native status values.
  */
 enum class AdapterState {
     Ready,

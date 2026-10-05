@@ -10,7 +10,7 @@ using namespace winrt;
 using namespace winrt::Windows::Devices::Bluetooth;
 using namespace winrt::Windows::Devices::Enumeration;
 
-// Updated содержит только изменения: сохраняем полную DeviceInformation между событиями.
+// Updated contains only changes: retain the full DeviceInformation between events.
 struct KnownDevices
 {
     std::mutex mutex;
@@ -39,7 +39,7 @@ void nameLookupFailed(
     }
 }
 
-// Отсутствующий AEP-адрес остаётся пустым: такую запись нельзя объединить с advertising.
+// A missing AEP address stays empty: the record cannot be merged with advertising data.
 static std::pair<hstring, hstring> knownDetails(DeviceInformation const& info)
 {
     auto properties = info.Properties();
@@ -50,7 +50,7 @@ static std::pair<hstring, hstring> knownDetails(DeviceInformation const& info)
     return {address, info.Name()};
 }
 
-// Отдельный callback переносит только метаданные; RSSI и факт обнаружения не выдумываются.
+// A separate callback carries only metadata; RSSI and advertisement sightings are not fabricated.
 static void publishKnown(
     std::weak_ptr<Manager> const& weak,
     jlong generation,
@@ -81,7 +81,7 @@ static void publishKnown(
 void startNameWatcher(std::shared_ptr<Manager> const& owner, jlong generation)
 {
     std::weak_ptr<Manager> weak = owner;
-    // AEP даёт системные имена; GATT-подключения для этого не открываются.
+    // AEP provides system names without opening GATT connections.
     auto watcher = DeviceInformation::CreateWatcher(
         BluetoothLEDevice::GetDeviceSelector(),
         {L"System.Devices.Aep.DeviceAddress"},

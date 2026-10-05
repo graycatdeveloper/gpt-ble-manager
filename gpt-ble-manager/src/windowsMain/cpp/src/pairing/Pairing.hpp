@@ -1,6 +1,6 @@
 /**
  * @file
- * Внутренние операции pairing/Pairing. JNI экспортируется только из jni/NativeBridge.cpp.
+ * Internal pairing/Pairing operations. JNI is exported only from jni/NativeBridge.cpp.
  */
 #pragma once
 
@@ -9,24 +9,24 @@
 namespace gpt::ble::manager::windows
 {
 /**
- * Читает системное сопряжение без создания GATT-сессии.
- * 0 — NotPaired, 1 — Paired, -1 — адрес не разрешён Windows.
+ * Reads the system pairing state without creating a GATT session. 0 means NotPaired, 1 means
+ * Paired, and -1 means Windows could not resolve the address.
  *
  * @see https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/pair-devices
  */
 jint queryPairingState(JNIEnv* env, jlong handle, jstring address, jint type);
 
 /**
- * Сопряжение ConfirmOnly с обработчиком consent; PIN никогда не принимается вслепую.
- * Возвращает исходный DevicePairingResultStatus для классификации в Kotlin.
+ * ConfirmOnly pairing with a consent handler; PIN requests are never accepted blindly. Returns the
+ * original DevicePairingResultStatus for classification in Kotlin.
  *
  * @see https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/pair-devices
  */
 jint pairDevice(JNIEnv* env, jlong handle, jstring address, jint type, jlong timeout);
 
 /**
- * Удаляет локальное сопряжение через ОС и возвращает DeviceUnpairingResultStatus.
- * На разрешение адреса и UnpairAsync расходуется один общий timeout.
+ * Removes the local bond through the OS and returns DeviceUnpairingResultStatus. Address
+ * resolution and UnpairAsync share one timeout budget.
  *
  * @see https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/pair-devices
  */

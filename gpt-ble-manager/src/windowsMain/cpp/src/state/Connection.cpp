@@ -88,7 +88,7 @@ void Connection::close() noexcept
     }
     catch (...)
     {
-        // Освобождение best effort: деструктор не должен передавать исключение через JNI.
+        // Best-effort cleanup: the destructor must not propagate an exception through JNI.
     }
 }
 

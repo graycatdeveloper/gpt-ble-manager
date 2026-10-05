@@ -1,6 +1,6 @@
 /**
  * @file
- * Внутренние операции gatt/AttributeOperations. JNI экспортируется только из jni/NativeBridge.cpp.
+ * Internal gatt/AttributeOperations operations. JNI is exported only from jni/NativeBridge.cpp.
  */
 #pragma once
 
@@ -9,16 +9,16 @@
 namespace gpt::ble::manager::windows
 {
 /**
- * Находит ATT handle под mutex и читает характеристику или дескриптор Uncached.
- * Kotlin сериализует операции; mutex не удерживается на время WinRT-ожидания.
+ * Looks up the ATT handle under the mutex and reads a characteristic or descriptor using Uncached
+ * mode. Kotlin serializes operations; the mutex is not held while waiting for WinRT.
  *
  * @see https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattcharacteristic
  */
 jbyteArray readAttribute(JNIEnv* env, jlong handle, jlong id, jint attribute, jboolean descriptor);
 
 /**
- * Копирует Java-байты перед отправкой. Для характеристики сохраняет выбор
- * WithResponse/WithoutResponse; запись дескриптора использует собственный WinRT API.
+ * Copies Java bytes before sending. Preserves the WithResponse/WithoutResponse choice for
+ * characteristics; descriptor writes use their dedicated WinRT API.
  *
  * @see https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattcharacteristic
  */

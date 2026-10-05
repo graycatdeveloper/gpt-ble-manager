@@ -1,56 +1,57 @@
-# Проверка gpt-ble-manager
+# gpt-ble-manager validation
 
-Дата: **5 октября 2026 года**. Версия: `0.2.3-local`.
+Date: **October 5, 2026**. Version: `0.2.3-local`.
 
-## Среда
+## Environment
 
 Windows x64, JDK 21, Gradle 9.7.1, Kotlin 2.4.20, AGP 9.4.1,
 Android compile SDK 37 / min SDK 26, Visual Studio 2022, MSVC 19.44,
-Windows SDK 10.0.26100.0. Версии зависимостей заданы в `gradle/libs.versions.toml`.
+Windows SDK 10.0.26100.0. Dependency versions are defined in `gradle/libs.versions.toml`.
 
-## Автоматические проверки
+## Automated checks
 
-| Проверка | Результат |
+| Check | Result |
 | --- | --- |
-| Windows JVM tests | 57 выполнено, 0 ошибок, 0 пропусков |
-| Android host tests | 47 выполнено, 0 ошибок, 0 пропусков |
-| CMake / CTest | 1 executable, 6 проверок, успешно |
-| Windows DLL / JAR, Android AAR, KMP metadata | Собраны |
-| Консольный пример Windows | Скомпилирован и запущен |
-| Публикация | Успешно в `build/repository` и Maven Local |
-| Форматирование | ktfmt 0.64 Kotlin style и clang-format 19, без расхождений |
+| Windows JVM tests | 57 executed, 0 failures, 0 skipped |
+| Android host tests | 47 executed, 0 failures, 0 skipped |
+| CMake / CTest | 1 executable, 6 checks, passed |
+| Windows DLL / JAR, Android AAR, KMP metadata | Built |
+| Windows console example | Compiled and run |
+| Publication | Succeeded to `build/repository` and Maven Local |
+| Formatting | ktfmt 0.64 Kotlin style and clang-format 19, no differences |
 
-Общие тесты выполняются на обеих платформах, поэтому 104 выполнения не означают
-104 различных сценария. Они проверяют имена устройств, объединение результатов
-сканирования, фильтры, сопряжение, очередь GATT, таймауты, отмену и контракт соединения.
-Платформенные тесты проверяют разбор Android advertising, состояния сопряжения,
-Windows GATT-каталог, перевод ошибок и жизненный цикл JNI-менеджеров.
+Common tests run on both platforms, so 104 executions do not represent 104 distinct
+scenarios. They cover device names, scan result merging, filters, pairing, the GATT
+queue, timeouts, cancellation, and the connection contract. Platform tests cover
+Android advertising parsing, pairing states, the Windows GATT catalog, error mapping,
+and JNI manager lifecycle.
 
-C++-проверки охватывают MAC, копирование IBuffer, UUID16/32/128 в Service Data,
-повреждённые AD-секции, порядок повторяющихся UUID и контекст GATT-ошибок.
+C++ checks cover MAC addresses, IBuffer copying, UUID16/32/128 in Service Data,
+malformed AD sections, duplicate UUID ordering, and GATT error context.
 
-## Упаковка и переименование
+## Packaging and renaming
 
-Проверены публикации `gpt.ble.manager:gpt-ble-manager`,
-`gpt.ble.manager:gpt-ble-manager-windows` и `gpt.ble.manager:gpt-ble-manager-android`.
-POM содержит новое имя, группу и MIT-лицензию. Текст лицензии включён в
-`META-INF/gpt-ble-manager/LICENSE` бинарных и исходных JAR; в AAR он находится
-внутри `classes.jar`.
+Validated publications: `gpt.ble.manager:gpt-ble-manager`,
+`gpt.ble.manager:gpt-ble-manager-windows`, and `gpt.ble.manager:gpt-ble-manager-android`.
+The POM contains the new name, group, and MIT license. The license text is included
+at `META-INF/gpt-ble-manager/LICENSE` in binary and source JARs; inside the AAR it is
+in `classes.jar`.
 
-Все 17 JNI-экспортов DLL совпадают с native-методами
-`gpt.ble.manager.windows.NativeBridge`. DLL внутри Windows JAR побайтово совпадает
-с результатом нативной сборки. Пути классов и ресурсов соответствуют новому пакету.
+All 17 DLL JNI exports match the native methods in
+`gpt.ble.manager.windows.NativeBridge`. The DLL bundled in the Windows JAR is
+byte-for-byte identical to the native build output. Class and resource paths match
+the new package.
 
-## Проверка сканирования
+## Scan check
 
-Консольный пример загрузил DLL из ресурсов JAR, получил `AdapterState.Ready` и
-завершил 15-секундное сканирование. Обнаружено 15 устройств;
-`scanState.error` и `scanState.nameResolutionError` равны `null`.
-Адреса и имена окружающих устройств в публичный отчёт не включены.
+The console example loaded the bundled DLL, reported `AdapterState.Ready`, and
+completed a 15-second scan. It discovered 15 devices; `scanState.error` and
+`scanState.nameResolutionError` were both `null`. Nearby devices' addresses and
+names are not included in this public report.
 
-## Повторение проверок
+## Reproducing the checks
 
-Из корня проекта в PowerShell:
+From the project root in PowerShell:
 
 ```powershell
 .\gradlew.bat :gpt-ble-manager:allTests :gpt-ble-manager:assemble :sample-windows:classes --warning-mode all
@@ -59,13 +60,13 @@ POM содержит новое имя, группу и MIT-лицензию. Т
 .\gradlew.bat :sample-windows:run
 ```
 
-Настройка CMake и команда CTest описаны в
-[README нативного модуля](gpt-ble-manager/src/windowsMain/cpp/README.md).
+CMake setup and the CTest command are described in the
+[native module README](gpt-ble-manager/src/windowsMain/cpp/README.md).
 
-## Ограничения
+## Limitations
 
-В этой проверке не выполнялись подключение к периферии, GATT-чтение/запись,
-уведомления и pair/unpair на физическом устройстве. Android проверен сборкой и
-host-тестами; аппаратные тесты на телефоне не выполнялись. Эти результаты
-подтверждают сборку, проверенные контракты, упаковку и работу Windows-сканирования,
-но не совместимость со всеми адаптерами, прошивками и Bluetooth-устройствами.
+This validation did not include connecting to a peripheral, GATT reads/writes,
+notifications, or pair/unpair on a physical device. Android was checked through
+builds and host tests; hardware tests on a phone were not run. These results confirm
+the build, tested contracts, packaging, and Windows scanning, but do not establish
+compatibility with every adapter, firmware, or Bluetooth device.

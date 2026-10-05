@@ -1,8 +1,9 @@
 package gpt.ble.manager.internal
 
 /**
- * Проверяет адрес до передачи платформе. Нормализация сохраняет двоеточия и не меняет тип адреса:
- * Public/Random — отдельное свойство, его нельзя вывести из строки MAC.
+ * Validates the address before passing it to the platform. Normalization preserves colons and does
+ * not change the address type: Public/Random is a separate property that cannot be inferred from
+ * the MAC string.
  */
 internal fun canonicalAddress(address: String): String {
     val result = address.uppercase()

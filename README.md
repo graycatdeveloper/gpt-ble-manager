@@ -1,68 +1,71 @@
 # gpt-ble-manager
 
-Kotlin Multiplatform BLE-клиент для **Windows x64 (JVM + C++/WinRT)** и
-**Android 8.0+ (API 26+)**. Общий API находится в пакете `gpt.ble.manager`.
+[![Maven Central: publication pending](https://img.shields.io/badge/Maven_Central-publication_pending-lightgrey?logo=apachemaven)](docs/PUBLISHING.md)
 
-**Проект создаётся и развивается с помощью ChatGPT.** ChatGPT используется при
-написании кода, рефакторинге, подготовке тестов и документации. Решения о принятии
-изменений и выпуске версий остаются за сопровождающими проекта.
+A Kotlin Multiplatform BLE client for **Windows x64 (JVM + C++/WinRT)** and
+**Android 8.0+ (API 26+)**. The shared API is in the `gpt.ble.manager` package.
 
-Лицензия основного кода — **[MIT](LICENSE)**. Проект находится в активной разработке;
-текущая версия для локальной сборки — `0.2.3-local`.
+**This project is created and developed with the help of ChatGPT.** ChatGPT assists
+with implementation, refactoring, tests, and documentation. Project maintainers
+remain responsible for accepting changes and releasing versions.
 
-## Возможности
+The main code is licensed under **[MIT](LICENSE)**. The project is actively developed;
+the current local build version is `0.2.3-local`.
 
-- Сканирование BLE с фильтрами по имени и UUID сервиса.
-- Объединение рекламного, системного и GATT-имени устройства.
-- Подключение, обнаружение сервисов, характеристик и дескрипторов.
-- Чтение и запись с ответом или без ответа.
-- Notifications, indications и управление CCCD.
-- Состояние сопряжения, pair/unpair с учётом возможностей ОС.
-- Состояния через `StateFlow`, уведомления через `SharedFlow`.
-- Последовательное выполнение GATT-запросов, таймауты и освобождение ресурсов.
+## Features
 
-| Платформа | Реализация | Особенности |
+- BLE scanning with name and service UUID filters.
+- Merging advertised, system, and GATT device names.
+- Connections and discovery of services, characteristics, and descriptors.
+- Reads and writes, with or without a response.
+- Notifications, indications, and CCCD management.
+- Pairing state, pair/unpair subject to OS capabilities.
+- State through `StateFlow`, notifications through `SharedFlow`.
+- Serialized GATT requests, timeouts, and resource cleanup.
+
+| Platform | Implementation | Notes |
 | --- | --- | --- |
-| Windows x64 | Kotlin/JVM, JNI, C++20/WinRT | DLL входит в JAR; MTU согласует Windows |
-| Android API 26+ | Android Bluetooth API | Runtime-разрешения запрашивает приложение |
+| Windows x64 | Kotlin/JVM, JNI, C++20/WinRT | DLL bundled in the JAR; Windows negotiates MTU |
+| Android API 26+ | Android Bluetooth API | The application requests runtime permissions |
 
-Режим периферии/GATT-server, автоматическое переподключение, iOS, Linux и macOS
-в текущий API не входят.
+Peripheral/GATT server mode, automatic reconnection, iOS, Linux, and macOS are
+outside the current API's scope.
 
-## Сборка
+## Building
 
-Версии инструментов и зависимостей заданы в
+Tool and dependency versions are defined in
 [`gradle/libs.versions.toml`](gradle/libs.versions.toml): Kotlin 2.4.20,
-Android Gradle Plugin 9.4.1, JDK 21, compile SDK 37. Версия Gradle задана в
+Android Gradle Plugin 9.4.1, JDK 21, and compile SDK 37. The Gradle version is set in
 [`gradle-wrapper.properties`](gradle/wrapper/gradle-wrapper.properties).
 
-Для полной сборки Windows и Android нужны:
+A complete Windows and Android build requires:
 
-1. Windows x64 и JDK 21.
-2. Android SDK с платформой 37. Путь задаётся через `ANDROID_HOME` или `sdk.dir`
-   в локальном `local.properties`.
-3. Visual Studio 2022 с инструментами C++, Windows SDK с C++/WinRT и CMake 3.20+.
+1. Windows x64 and JDK 21.
+2. Android SDK platform 37. Set its location through `ANDROID_HOME` or `sdk.dir`
+   in your local `local.properties`.
+3. Visual Studio 2022 with C++ tools, a Windows SDK containing C++/WinRT, and CMake 3.20+.
 
-Из корня репозитория в PowerShell:
+From the repository root in PowerShell:
 
 ```powershell
 .\gradlew.bat :gpt-ble-manager:allTests :gpt-ble-manager:assemble
 .\gradlew.bat :gpt-ble-manager:publishToMavenLocal
 ```
 
-Gradle ищет CMake в `PATH`, стандартной установке и Visual Studio. Путь можно переопределить:
+Gradle searches for CMake in `PATH`, its standard installation, and Visual Studio.
+To override its location:
 
 ```powershell
 .\gradlew.bat :gpt-ble-manager:buildWindowsNative -PcmakeExecutable="C:/tools/cmake/bin/cmake.exe"
 ```
 
-Android собирается отдельно на поддерживаемой AGP системе:
+Android can be built separately on a system supported by AGP:
 `bash ./gradlew :gpt-ble-manager:assembleAndroidMain :gpt-ble-manager:testAndroidHostTest`.
-Для Windows-артефакта нужна сборка DLL на Windows.
+The Windows artifact requires its DLL to be built on Windows.
 
-## Подключение
+## Adding the dependency
 
-После `publishToMavenLocal` добавьте локальный репозиторий в настройки приложения:
+After `publishToMavenLocal`, add the local repository to your application's settings:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -88,7 +91,7 @@ kotlin {
 }
 ```
 
-Обычное JVM-приложение на Windows:
+A regular JVM application on Windows:
 
 ```kotlin
 dependencies {
@@ -96,16 +99,19 @@ dependencies {
 }
 ```
 
-Эти команды используют локальную публикацию. Наличие версии в Maven Central или
-GitHub Packages не предполагается. После повторной публикации той же версии
-обновите зависимости потребителя через `--refresh-dependencies`.
+These instructions use a local publication. They do not imply that this version is
+available on Maven Central or GitHub Packages. After republishing the same version,
+refresh the consumer's dependencies with `--refresh-dependencies`.
 
-Задача `:gpt-ble-manager:publish` также публикует в `build/repository` этого репозитория.
-Другую папку можно задать через `-PlocalRepositoryPath=<путь>`.
+The `:gpt-ble-manager:publish` task also publishes to this repository's `build/repository`.
+Override the directory with `-PlocalRepositoryPath=<path>`.
 
-## Создание менеджера
+For public releases, see [Publishing to Maven Central](docs/PUBLISHING.md).
+The header badge remains marked as pending until the first release is available.
 
-В Windows source set:
+## Creating a manager
+
+In the Windows source set:
 
 ```kotlin
 import gpt.ble.manager.BleManager
@@ -114,28 +120,28 @@ import gpt.ble.manager.windows.WindowsBleManager
 val manager: BleManager = WindowsBleManager()
 ```
 
-В Android source set:
+In the Android source set:
 
 ```kotlin
 import gpt.ble.manager.android.AndroidBleManager
 
 val manager = AndroidBleManager(context.applicationContext)
 val permissions = manager.requiredPermissions()
-// Activity запрашивает отсутствующие разрешения до startScan/connect.
+// The Activity requests missing permissions before startScan/connect.
 ```
 
-На Android 12+ нужны `BLUETOOTH_SCAN` и `BLUETOOTH_CONNECT`, на Android 8–11 —
-`ACCESS_FINE_LOCATION` и включённая геолокация. Библиотека не запрашивает runtime-разрешения
-самостоятельно. Системный интерфейс сопряжения может показывать сама ОС.
+Android 12+ requires `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT`; Android 8–11 requires
+`ACCESS_FINE_LOCATION` and location services to be enabled. The library does not
+request runtime permissions itself. The OS may display its own pairing UI.
 
-Manifest использует `neverForLocation`. Приложению, определяющему местоположение по BLE,
-нужно настроить собственный merged manifest. Этот флаг также может ограничивать
-обнаружение некоторых маяков.
-[Справка Android](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions).
+The manifest uses `neverForLocation`. Applications that derive location from BLE
+must configure their merged manifest accordingly. This flag may also restrict
+discovery of some beacons.
+See [Android Bluetooth permissions](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions).
 
-## Поиск и подключение
+## Scanning and connecting
 
-Пример для `commonMain`; передайте префикс имени своего устройства:
+Example for `commonMain`; pass your device's name prefix:
 
 ```kotlin
 import gpt.ble.manager.AdapterState
@@ -160,7 +166,7 @@ suspend fun connectToDevice(manager: BleManager, namePrefix: String): BleConnect
 }
 ```
 
-Использование уже созданного менеджера из suspend-функции:
+Use an existing manager from a suspend function:
 
 ```kotlin
 try {
@@ -178,29 +184,29 @@ try {
 }
 ```
 
-После `manager.close()` создайте новый менеджер. Удалённое отключение отражается в
-`connection.state` и `connection.disconnectReason`.
+Create a new manager after `manager.close()`. Remote disconnection is reflected in
+`connection.state` and `connection.disconnectReason`.
 
-### Имена устройств
+### Device names
 
-Имя может прийти отдельным scan response после первого безымянного пакета.
-`namePrefix` применяется после объединения данных и учитывает регистр.
-Приоритет источников: **Advertisement → GATT → System**.
+A name may arrive in a separate scan response after the first unnamed packet.
+`namePrefix` is case-sensitive and is applied after merging the data.
+Source priority: **Advertisement → GATT → System**.
 
-`device.name` остаётся `null`, пока имя неизвестно; `displayName` подставляет адрес
-только для отображения. Адрес, возвращённый ОС вместо имени, отбрасывается.
+`device.name` remains `null` until a name is known; only `displayName` falls back to
+the address for display. An address returned by the OS as a name is discarded.
 
-С `ScanOptions(includeKnownDevices = true)` в результат также попадают известные
-Windows устройства или сопряжённые Android LE/dual-mode устройства. Такая запись
-может быть недоступна: проверяйте `seenInCurrentScan` и nullable `rssi`.
-GATT-имя читается через `readDeviceName()` после подключения; поиск не подключается
-автоматически к каждому безымянному устройству.
+With `ScanOptions(includeKnownDevices = true)`, results also include Windows-known
+devices or bonded Android LE/dual-mode devices. Such a record may be unreachable:
+check `seenInCurrentScan` and nullable `rssi`. Read the GATT name using
+`readDeviceName()` after connecting; scanning does not automatically connect to
+every unnamed device.
 
-### GATT и уведомления
+### GATT and notifications
 
-Получайте характеристики из `connection.discoverServices()`. UUID может повторяться:
-для идентификации используются `id`, `serviceId` и `connectionId`.
-Объекты предыдущего соединения повторно использовать нельзя.
+Obtain characteristics from `connection.discoverServices()`. UUIDs may repeat:
+`id`, `serviceId`, and `connectionId` establish identity.
+Objects from a previous connection cannot be reused.
 
 ```kotlin
 val services = connection.discoverServices()
@@ -208,17 +214,17 @@ val readable = services.flatMap { it.characteristics }.first { it.canRead }
 val bytes = connection.read(readable).toByteArray()
 ```
 
-Перед `subscribe(characteristic)` запустите collector `connection.notifications`.
-Выбирайте характеристику с `canNotify` или `canIndicate`; отключайте подписку через
-`SubscriptionMode.Disabled`. Для CCCD `2902` используйте `subscribe`.
-Пример с порядком listener/CCCD есть в
-[`GattExample.kt`](sample-windows/src/main/kotlin/gpt/ble/manager/sample/GattExample.kt).
+Start collecting `connection.notifications` before calling `subscribe(characteristic)`.
+Select a characteristic with `canNotify` or `canIndicate`; disable the subscription
+with `SubscriptionMode.Disabled`. Use `subscribe` for CCCD `2902`.
+See [`GattExample.kt`](sample-windows/src/main/kotlin/gpt/ble/manager/sample/GattExample.kt)
+for listener/CCCD ordering.
 
-Запись принимает не более `MTU - 3` байт. Разбиение команды определяется протоколом
-устройства. Windows возвращает фактически согласованный MTU;
-`requestMtu` на Android запрашивает изменение у ОС.
+A write accepts at most `MTU - 3` bytes. Command fragmentation depends on the device
+protocol. Windows returns the actually negotiated MTU; on Android, `requestMtu`
+asks the OS to change it.
 
-### Сопряжение и ошибки
+### Pairing and errors
 
 ```kotlin
 val state = manager.getPairingState(device)
@@ -226,17 +232,18 @@ val paired = manager.pair(device)
 val unpaired = manager.unpair(device)
 ```
 
-Перед pair/unpair закройте соединение этого менеджера с устройством. Windows поддерживает
-`ConfirmOnly`; PIN/passkey-сценарии выполняйте через системные настройки. Android unpair
-требует API 36+ и ассоциацию `CompanionDeviceManager`, принадлежащую приложению;
-иначе возвращается `BleError.Unsupported`. Скрытые Android API не используются.
+Close this manager's connection to the device before pair/unpair. Windows supports
+`ConfirmOnly`; use system settings for PIN/passkey scenarios. Android unpair requires
+API 36+ and a `CompanionDeviceManager` association owned by the application;
+otherwise it returns `BleError.Unsupported`. No hidden Android APIs are used.
 
-`Paired` не гарантирует доступ к каждому GATT-сервису. `BleException.code` содержит
-переносимую категорию ошибки, а `cause` — платформенную причину. Таймаут или отмена
-GATT-запроса завершают сессию, чтобы поздний ответ не попал в следующий запрос.
-Отмена pair/unpair не гарантирует отмену уже выполняющегося действия ОС.
+`Paired` does not guarantee access to every GATT service. `BleException.code` holds
+a portable error category, while `cause` retains the platform cause. A GATT timeout
+or cancellation terminates the session to prevent a late response from completing
+the next request. Cancelling pair/unpair does not guarantee cancellation of an
+OS operation already in progress.
 
-## Консольный пример Windows
+## Windows console example
 
 ```powershell
 .\gradlew.bat :sample-windows:run
@@ -244,23 +251,26 @@ GATT-запроса завершают сессию, чтобы поздний �
 .\gradlew.bat :sample-windows:run --args="AA:BB:CC:DD:EE:01 --direct --inspect"
 ```
 
-`--known` включает системные записи, `--prefix=<имя>` фильтрует сканирование,
-`--inspect` читает каталог и стандартные атрибуты. `--notify=<uuid>` проверяет уведомления
-пять секунд. `--pairing-state` только читает состояние; `--pair` и `--unpair` меняют его.
-Имя и адрес в примерах условные — замените их значениями своего устройства.
+`--known` includes system records, `--prefix=<name>` filters the scan, and `--inspect`
+reads the catalog and standard attributes. `--notify=<uuid>` checks notifications
+for five seconds. `--pairing-state` only reads the state; `--pair` and `--unpair`
+change it. The example name and address are placeholders; replace them with your
+device's values.
 
-## Разработка и поддержка
+## Development and support
 
-- [Архитектура Kotlin](docs/KOTLIN_ARCHITECTURE.md).
-- [C++/WinRT, JNI и настройка CLion](gpt-ble-manager/src/windowsMain/cpp/README.md).
-- [Правила внесения изменений](CONTRIBUTING.md).
-- [Проверки и их ограничения](TEST_REPORT.md).
+- [Kotlin architecture](docs/KOTLIN_ARCHITECTURE.md).
+- [C++/WinRT, JNI, and CLion setup](gpt-ble-manager/src/windowsMain/cpp/README.md).
+- [Contributing guidelines](CONTRIBUTING.md).
+- [Validation and its limitations](TEST_REPORT.md).
+- [Publishing to Maven Central](docs/PUBLISHING.md).
 
-В issue укажите ОС, версию библиотеки, шаги воспроизведения, `BleException.code` и stack trace.
-Перед публикацией логов удаляйте адреса устройств и другие личные сведения.
+Include the OS, library version, reproduction steps, `BleException.code`, and stack
+trace when reporting an issue. Remove device addresses and other personal data
+before publishing logs.
 
-## Лицензия
+## License
 
-Основной код и документация распространяются под [MIT License](LICENSE).
-Gradle Wrapper сохраняет собственную Apache-2.0 лицензию; см. [NOTICE](NOTICE) и
-[текст лицензии Wrapper](licenses/Apache-2.0.txt). Зависимости сохраняют свои лицензии.
+The main source code and documentation are distributed under the [MIT License](LICENSE).
+Gradle Wrapper retains its Apache-2.0 license; see [NOTICE](NOTICE) and the
+[Wrapper license text](licenses/Apache-2.0.txt). Dependencies retain their own licenses.

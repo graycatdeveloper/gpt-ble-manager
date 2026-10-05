@@ -60,7 +60,7 @@ jobjectArray discoverGatt(JNIEnv* env, jlong handle, jlong id)
     std::vector<std::wstring> records;
     std::map<int, GattCharacteristic> characteristics;
     std::map<int, GattDescriptor> descriptors;
-    // Один общий бюджет: число сервисов не умножает 12-секундный timeout.
+    // One shared budget: the number of services does not multiply the 12-second timeout.
     auto limit = deadline();
     for (auto const& service : services)
     {
@@ -102,7 +102,7 @@ jobjectArray discoverGatt(JNIEnv* env, jlong handle, jlong id)
         {
             throw std::runtime_error("Connection ended during discovery");
         }
-        // Публикация всех handles происходит только после полного успеха discovery.
+        // All handles are published only after discovery completes successfully.
         current->characteristics = std::move(characteristics);
         current->descriptors = std::move(descriptors);
         current->catalogReady.store(true);

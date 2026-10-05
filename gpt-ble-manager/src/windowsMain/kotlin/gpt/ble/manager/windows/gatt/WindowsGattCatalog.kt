@@ -6,9 +6,9 @@ import gpt.ble.manager.GattDescriptor
 import gpt.ble.manager.GattService
 
 /**
- * Декодирует JNI-каталог S|service|uuid, C|service|char|uuid|properties, D|char|desc|uuid. ATT
- * handles связывают записи: повторяющиеся UUID допустимы. Порядок записей сохраняется. Неисправная
- * запись по-прежнему вызывает исключение, а не неполный успешный результат.
+ * Decodes the JNI catalog: S|service|uuid, C|service|char|uuid|properties, D|char|desc|uuid. ATT
+ * handles link records, so duplicate UUIDs are allowed. Record order is preserved. A malformed
+ * record still throws an exception instead of producing an incomplete successful result.
  */
 internal fun decodeWindowsGattCatalog(id: String, source: Array<String>): List<GattService> {
     val records = source.map { it.split('|') }

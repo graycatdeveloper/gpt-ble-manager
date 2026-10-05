@@ -9,9 +9,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Объединяет пакеты и системные записи до фильтрации: имя может появиться позже первого пакета.
- * Методы вызывает платформенный scanner под своим monitor; отдельного mutex здесь нет.
- * LinkedHashMap сохраняет порядок обнаружения, StateFlow публикует новый immutable-список.
+ * Merges packets and system records before filtering because a name may arrive after the first
+ * packet. The platform scanner calls these methods under its own monitor; there is no separate
+ * mutex here. LinkedHashMap preserves discovery order, and StateFlow publishes a new immutable
+ * list.
  */
 internal class ScanStore(private val options: ScanOptions) {
     private val entries = linkedMapOf<String, ScanEntry>()

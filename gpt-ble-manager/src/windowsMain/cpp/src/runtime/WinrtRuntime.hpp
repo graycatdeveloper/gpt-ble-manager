@@ -1,6 +1,6 @@
 /**
  * @file
- * Общий контракт ожидания и ошибок Windows Runtime. Это внутренний API DLL.
+ * Shared Windows Runtime waiting and error contracts. This is an internal DLL API.
  */
 #pragma once
 
@@ -15,23 +15,23 @@ namespace gpt::ble::manager::windows
 using Clock = std::chrono::steady_clock;
 
 /**
- * Инициализирует COM/WinRT один раз на текущем потоке.
- * Вызывается каждой JNI-точкой входа до обращения к Windows.
+ * Initializes COM/WinRT once on the current thread. Every JNI entry point calls this before
+ * accessing Windows APIs.
  *
  * @see https://learn.microsoft.com/en-us/windows/win32/api/roapi/nf-roapi-roinitialize
  */
 void apartment();
 
 /**
- * Общий бюджет обычной GATT-операции — 12 секунд.
- * В составной операции один deadline передаётся всем шагам.
+ * The total budget for a regular GATT operation is 12 seconds. All steps of a composite operation
+ * share the same deadline.
  */
 Clock::time_point deadline();
 
 /**
- * Ограниченное синхронное ожидание WinRT на рабочем потоке Kotlin Dispatchers.IO.
- * Отмена запрашивается у ОС при исчерпании бюджета; TIMEOUT: сохраняется для Kotlin.
- * GetResults возвращает значение либо поднимает исходную WinRT-ошибку.
+ * Bounded synchronous WinRT wait on a Kotlin Dispatchers.IO worker thread. Requests OS
+ * cancellation when the budget expires; preserves the TIMEOUT: prefix for Kotlin. GetResults
+ * returns a value or raises the original WinRT error.
  *
  * @see https://learn.microsoft.com/en-us/windows/apps/develop/cpp-winrt/concurrency
  */
@@ -51,8 +51,8 @@ auto await(T const& operation, Clock::time_point deadline)
 }
 
 /**
- * Сохраняет числовой GATT-статус отдельно от сообщения.
- * JNI преобразует его в WindowsGattException, а Kotlin — в BleException.
+ * Stores the numeric GATT status separately from the message. JNI converts it to
+ * WindowsGattException, and Kotlin converts that to BleException.
  */
 struct GattFailure : std::runtime_error
 {
@@ -64,7 +64,7 @@ struct GattFailure : std::runtime_error
 };
 
 /**
- * Success пропускается; остальные статусы превращаются в GattFailure.
+ * Passes Success through; converts all other statuses to GattFailure.
  *
  * @see https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.genericattributeprofile.gattcommunicationstatus
  */

@@ -23,9 +23,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Общие инварианты Android и Windows: snapshots, проверка handles, MTU и очередь запросов.
- * terminate использует compareAndSet, поэтому releasePlatform вызывается ровно один раз.
- * Переполнение буфера уведомлений завершает сессию явно, вместо молчаливой потери пакетов.
+ * Shared Android and Windows invariants: snapshots, handle validation, MTU, and the request queue.
+ * terminate uses compareAndSet so that releasePlatform runs exactly once. Notification buffer
+ * overflow explicitly terminates the session instead of silently dropping packets.
  *
  * @see <a
  *   href="https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.flow/-mutable-shared-flow/">MutableSharedFlow</a>
@@ -170,9 +170,9 @@ internal abstract class ManagedConnection(
     }
 
     /**
-     * Сначала публикует причину и Disconnected, затем будит очередь, затем освобождает платформу.
-     * Этот порядок позволяет ожидающим запросам получить причину закрытия; повторный вызов ничего
-     * не делает.
+     * Publishes the reason and Disconnected first, then wakes the queue and releases platform
+     * resources. This order lets pending requests receive the closure reason; repeated calls do
+     * nothing.
      */
     internal fun terminate(error: BleException) {
         if (!closed.compareAndSet(false, true)) {

@@ -14,8 +14,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
 /**
- * Один запрос на сессию, включая время ожидания ответа ОС. Mutex сериализует callers; stopped
- * пробуждает текущую операцию. Timeout/отмена делают сессию непригодной для новых запросов.
+ * One request per session, including the wait for the OS response. Mutex serializes callers;
+ * stopped wakes the current operation. A timeout or cancellation makes the session unusable for new
+ * requests.
  *
  * @see <a href="https://kotlinlang.org/docs/cancellation-and-timeouts.html">Cancellation and
  *   timeouts</a>

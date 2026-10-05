@@ -22,7 +22,7 @@ void configureSubscription(jlong handle, jlong id, jint attribute, jint mode)
         characteristic = current->characteristics.at(attribute);
         registered = current->notifications.contains(attribute);
     }
-    // Новую подписку можно отозвать отдельно, не разрушив прежнюю при ошибке CCCD.
+    // The new subscription can be revoked separately, preserving the old one if the CCCD write fails.
     event_token fresh{};
     if (mode != 0 && !registered)
     {

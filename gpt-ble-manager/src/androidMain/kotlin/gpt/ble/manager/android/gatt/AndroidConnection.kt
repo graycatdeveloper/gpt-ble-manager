@@ -27,9 +27,9 @@ import java.util.UUID
 import kotlinx.coroutines.CompletableDeferred
 
 /**
- * Платформенная GATT-сессия Android. Общие проверки и отмена запросов находятся в
- * ManagedConnection. Числовые IDs связаны с объектами только этой сессии; releasePlatform
- * освобождает их и удаляет соединение из менеджера через callback removed.
+ * Android GATT session. Shared validation and request cancellation live in ManagedConnection.
+ * Numeric IDs refer only to objects in this session; releasePlatform releases them and removes the
+ * connection from the manager through the removed callback.
  */
 internal class AndroidConnection(
     private val context: Context,
@@ -66,9 +66,10 @@ internal class AndroidConnection(
         }
 
     /**
-     * Публикует Pending до вызова Android API: даже немедленный callback найдёт свой запрос.
-     * Ожидание Deferred выполняется вне monitor. finally очищает только этот Pending, а не новый.
-     * Сериализацию и закрытие сессии при timeout/cancellation обеспечивает OperationQueue.
+     * Publishes Pending before calling the Android API so that even an immediate callback can find
+     * its request. Deferred is awaited outside the monitor. finally clears only this Pending, never
+     * a newer one. OperationQueue serializes requests and closes the session on timeout or
+     * cancellation.
      */
     private suspend fun request(
         kind: String,
@@ -106,8 +107,9 @@ internal class AndroidConnection(
     }
 
     /**
-     * Принимает только callback текущего BluetoothGatt с совпадающими kind и identity target. Байты
-     * копируются до завершения Deferred, поскольку Android может переиспользовать исходный буфер.
+     * Accepts only callbacks from the current BluetoothGatt with a matching kind and target
+     * identity. Copies bytes before completing Deferred because Android may reuse the original
+     * buffer.
      */
     internal fun complete(
         active: BluetoothGatt,

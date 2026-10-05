@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Пример объединяет advertising и системные имена через публичный API. Listener запускается в том
- * же scope, что main; stopScan и cancelAndJoin остаются в finally.
+ * Merges advertising and system names through the public API. The listener runs in the same scope
+ * as main; stopScan and cancelAndJoin remain in finally.
  */
 internal suspend fun CoroutineScope.findDevice(
     manager: BleManager,

@@ -23,9 +23,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 /**
- * Публичная точка входа Windows. Scanner и pairing-controller разделяют monitor менеджера, а
- * соединения владеют собственными GATT-ресурсами. close останавливает работу и закрывает сессии;
- * изменение питания завершает активные соединения с явной причиной.
+ * Public Windows entry point. The scanner and pairing controller share the manager's monitor, while
+ * connections own their GATT resources. close stops work and closes sessions; a power state change
+ * terminates active connections with an explicit reason.
  */
 class WindowsBleManager : BleManager {
     private val lock = Any()

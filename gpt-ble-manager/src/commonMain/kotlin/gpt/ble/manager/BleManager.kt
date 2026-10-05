@@ -3,9 +3,9 @@ package gpt.ble.manager
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Владелец сканирования и соединений платформы. Реализацию выбирает приложение: WindowsBleManager
- * или AndroidBleManager. После close создайте новый экземпляр. Состояния доступны как read-only
- * StateFlow, изменения публикует библиотека.
+ * Owns platform scanning and connections. The application chooses WindowsBleManager or
+ * AndroidBleManager. Create a new instance after close. States are exposed as read-only StateFlow
+ * values; the library publishes updates.
  */
 interface BleManager {
     val adapterState: StateFlow<AdapterState>
@@ -13,7 +13,8 @@ interface BleManager {
     val devices: StateFlow<List<BleDevice>>
 
     /**
-     * Обновляет снимок доступности ОС; выдача Android runtime-разрешений остаётся за приложением.
+     * Refreshes the OS availability snapshot; the application remains responsible for requesting
+     * Android runtime permissions.
      */
     suspend fun refreshAdapterState(): AdapterState
 
@@ -41,16 +42,13 @@ interface BleManager {
     /** Starts a fresh scan, clearing the previous results. Repeated calls restart it. */
     suspend fun startScan(options: ScanOptions = ScanOptions())
 
-    /**
-     * Останавливает текущий поиск. Уже опубликованные результаты остаются доступны до нового
-     * startScan.
-     */
+    /** Stops the current scan. Published results remain available until the next startScan. */
     fun stopScan()
 
     /**
-     * Открывает одну сессию для адреса. Таймаут ограничивает ожидание; ошибка/отмена освобождает
-     * ресурсы. Адрес, занятый соединением или операцией pairing этого менеджера, повторно не
-     * используется.
+     * Opens one session for an address. The timeout bounds the wait; errors and cancellation
+     * release resources. An address already used by this manager's connection or pairing operation
+     * cannot be reused.
      */
     suspend fun connect(device: BleDevice, timeoutMillis: Long = 20_000): BleConnection
 

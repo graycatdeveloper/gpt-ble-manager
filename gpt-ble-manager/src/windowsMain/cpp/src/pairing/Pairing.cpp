@@ -19,8 +19,8 @@ DeviceInformation pairingDevice(JNIEnv* env, jstring address, jint type, Clock::
     input.erase(std::remove(input.begin(), input.end(), L':'), input.end());
     auto numeric = std::stoull(input, nullptr, 16);
 
-    // FindAllAsync(AEP) ожидал radio-enumeration и давал timeout на известном устройстве.
-    // Прямое разрешение адреса использует Windows metadata без открытия GATT-сессии.
+    // FindAllAsync(AEP) waited for radio enumeration and timed out for a known device.
+    // Direct address resolution uses Windows metadata without opening a GATT session.
     struct DeviceScope
     {
         BluetoothLEDevice value;
@@ -74,8 +74,8 @@ jint pairDevice(JNIEnv* env, jlong handle, jstring address, jint type, jlong tim
         return -1;
     }
     manager(handle);
-    // На проверенном JVM host обычный PairAsync возвращал Failed (19).
-    // Custom ConfirmOnly сработал. PIN-сценарии не входят в поддерживаемые ceremonies.
+    // On the tested JVM host, regular PairAsync returned Failed (19).
+    // Custom ConfirmOnly succeeded. PIN scenarios are not among the supported pairing ceremonies.
     auto pairing = info.Pairing().Custom();
     std::weak_ptr<Manager> weak = owner;
     auto requested = pairing.PairingRequested(
@@ -105,7 +105,7 @@ jint unpairDevice(JNIEnv* env, jlong handle, jstring address, jint type, jlong t
     {
         return -1;
     }
-    // Повторная проверка после разрешения адреса: manager мог закрыться за время await.
+    // Recheck after address resolution: the manager may have closed during await.
     manager(handle);
     auto result = await(info.Pairing().UnpairAsync(), limit);
     return static_cast<jint>(result.Status());

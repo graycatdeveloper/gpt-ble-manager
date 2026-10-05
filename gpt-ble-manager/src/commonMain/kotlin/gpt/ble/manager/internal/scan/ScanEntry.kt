@@ -4,8 +4,8 @@ import gpt.ble.manager.BleDevice
 import gpt.ble.manager.DeviceNameSource
 
 /**
- * Источники имени хранятся раздельно: Advertisement > GATT > System. Пустой следующий пакет не
- * стирает уже известное имя и не повышает его достоверность.
+ * Name sources are stored separately: Advertisement > GATT > System. An empty subsequent packet
+ * neither erases a known name nor increases its confidence.
  */
 internal data class ScanEntry(
     val device: BleDevice,

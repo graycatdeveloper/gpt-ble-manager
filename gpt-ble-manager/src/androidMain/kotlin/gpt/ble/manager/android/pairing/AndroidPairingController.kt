@@ -27,9 +27,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Связывает createBond/removeBond с ожиданием ACTION_BOND_STATE_CHANGED. Подписка ставится до
- * снимка состояния и запуска операции, чтобы не потерять синхронный broadcast. Monitor общий с
- * connect и close; UI принадлежит Android.
+ * Connects createBond/removeBond to waiting for ACTION_BOND_STATE_CHANGED. Registers the listener
+ * before reading the state snapshot and starting the operation so that a synchronous broadcast is
+ * not lost. Shares the monitor with connect and close; Android owns the UI.
  *
  * @see <a
  *   href="https://developer.android.com/reference/android/bluetooth/BluetoothDevice#createBond()">createBond</a>
@@ -47,7 +47,7 @@ internal class AndroidPairingController(
 
     fun hasPending(address: String): Boolean = bondOperations.containsKey(address)
 
-    /** Вызывается manager.close под общим monitor; разблокирует ожидающие bond broadcasts. */
+    /** Called by manager.close under the shared monitor; unblocks waiters for bond broadcasts. */
     fun stopPending() {
         bondOperations.values.forEach {
             it.stop(BleException(BleError.Closed, "Manager is closed"))

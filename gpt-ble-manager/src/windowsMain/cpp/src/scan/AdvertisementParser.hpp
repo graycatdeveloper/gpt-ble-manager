@@ -1,6 +1,6 @@
 /**
  * @file
- * Декодирование UUID advertising отдельно от событий watcher и JNI.
+ * Decodes advertising UUIDs independently of watcher events and JNI.
  */
 #pragma once
 
@@ -11,9 +11,9 @@
 namespace gpt::ble::manager::windows
 {
 /**
- * Собирает UUID из ServiceUuids и AD Service Data 0x16/0x20/0x21.
- * Сохраняет порядок и повторы: объединение в множество выполняет Kotlin.
- * Секции короче 2/4/16 байт пропускаются; служебные UUID имеют little-endian формат.
+ * Collects UUIDs from ServiceUuids and AD Service Data 0x16/0x20/0x21. Preserves order and
+ * duplicates; Kotlin merges them into a set. Skips sections shorter than 2/4/16 bytes; service
+ * UUIDs use little-endian encoding.
  *
  * @see https://www.bluetooth.com/specifications/assigned-numbers/
  */

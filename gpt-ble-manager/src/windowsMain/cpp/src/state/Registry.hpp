@@ -1,6 +1,6 @@
 /**
  * @file
- * Внутренние операции state/Registry. JNI экспортируется только из jni/NativeBridge.cpp.
+ * Internal state/Registry operations. JNI is exported only from jni/NativeBridge.cpp.
  */
 #pragma once
 
@@ -13,28 +13,28 @@ struct Manager;
 struct Connection;
 
 /**
- * Единый монотонный счётчик manager и connection handles.
- * Handle — не указатель, освобождённое значение не переиспользуется.
+ * A single monotonic counter for manager and connection handles. A handle is not a pointer, and
+ * released values are not reused.
  */
 jlong allocateHandle();
 
 /**
- * Возвращают strong reference под mutex: объект остаётся живым после выхода
- * из реестра. Закрытый/неизвестный handle даёт исходное runtime_error.
+ * Return strong references under the mutex so that objects remain alive after registry access
+ * ends. A closed or unknown handle raises the original runtime_error.
  */
 std::shared_ptr<Manager> manager(jlong handle);
 std::shared_ptr<Connection> connection(jlong handle, jlong id);
 
 /**
- * Создаёт manager и привязывает точные Kotlin callback-дескрипторы.
- * Global reference живёт до уничтожения последнего владельца manager.
+ * Creates a manager and binds the exact Kotlin callback descriptors. The global reference lives
+ * until the manager's last owner is destroyed.
  *
  * @see https://docs.oracle.com/en/java/javase/17/docs/specs/jni/functions.html#global-and-local-references
  */
 jlong createManager(JNIEnv* env, jobject self);
 
 /**
- * Удаляет handle до закрытия ресурсов; повторное уничтожение ничего не делает.
+ * Removes the handle before closing resources; repeated destruction does nothing.
  *
  * @see https://docs.oracle.com/en/java/javase/17/docs/specs/jni/functions.html#global-and-local-references
  */

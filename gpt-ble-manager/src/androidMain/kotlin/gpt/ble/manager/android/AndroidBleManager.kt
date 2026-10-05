@@ -30,9 +30,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Публичная точка входа Android. Scanner и pairing-controller разделяют monitor менеджера, а
- * соединения владеют собственными GATT-ресурсами. close останавливает работу и закрывает сессии;
- * изменение питания завершает активные соединения с явной причиной.
+ * Public Android entry point. The scanner and pairing controller share the manager's monitor, while
+ * connections own their GATT resources. close stops work and closes sessions; a power state change
+ * terminates active connections with an explicit reason.
  */
 class AndroidBleManager(context: Context) : BleManager {
     private val context = context.applicationContext
@@ -87,7 +87,7 @@ class AndroidBleManager(context: Context) : BleManager {
         adapterStatus.value = currentState()
     }
 
-    /** Разрешения запрашивает Activity; набор зависит от версии Android. */
+    /** The Activity requests permissions; the required set depends on the Android version. */
     fun requiredPermissions(): List<String> = adapterStateReader.requiredPermissions()
 
     private fun currentState(): AdapterState = adapterStateReader.currentState()

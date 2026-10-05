@@ -1,100 +1,103 @@
-# Kotlin-архитектура
+# Kotlin architecture
 
-Публичный пакет — `gpt.ble.manager`. Общий модуль содержит модели, интерфейсы и
-инварианты сессии. Платформенные менеджеры реализуют доступ к ОС. Формат кода задаёт
-`.editorconfig`: отступ четыре пробела, развёрнутые блоки управления, явные imports.
-Ключевые контракты и причины решений описаны также в KDoc исходников.
+The public package is `gpt.ble.manager`. The common module contains models,
+interfaces, and session invariants. Platform managers implement OS access.
+`.editorconfig` defines the style: four-space indentation, expanded control-flow
+blocks, and explicit imports. Source KDoc also explains key contracts and design decisions.
 
-## Карта исходников
+## Source map
 
-Пути ниже относительны `gpt-ble-manager/src`:
+Paths below are relative to `gpt-ble-manager/src`:
 
-| Source set / папка | Назначение |
+| Source set / directory | Responsibility |
 | --- | --- |
-| `commonMain/kotlin/gpt/ble/manager` | BleManager, BleConnection, UUID, байты, устройства, GATT-модели, ошибки и состояния |
-| `commonMain/.../internal/scan` | ScanStore, ScanEntry, рекламный пакет |
-| `commonMain/.../internal/names` | Проверка системного имени и декодирование GATT Device Name |
-| `commonMain/.../internal/gatt` | ManagedConnection и OperationQueue |
-| `commonMain/.../internal/pairing` | Ожидание конечного состояния сопряжения |
-| `windowsMain/.../windows` | Публичный менеджер, NativeBridge, WindowsGattException |
-| `windowsMain/.../windows/scan` | Поколения сканирования и объединение native callbacks |
-| `windowsMain/.../windows/pairing` | Резервирование адреса, pair/unpair, перевод статусов WinRT |
-| `windowsMain/.../windows/gatt` | Операции соединения и декодирование каталога JNI |
-| `windowsMain/.../windows/jni` | Загрузка DLL из ресурсов JAR |
-| `androidMain/.../android` | Публичный AndroidBleManager |
-| `androidMain/.../android/adapter` | Доступность адаптера и runtime-разрешения |
-| `androidMain/.../android/scan` | ScanCallback, обработка ScanRecord и AD-секций |
-| `androidMain/.../android/pairing` | Системные broadcast-события и управление сопряжением |
-| `androidMain/.../android/gatt` | Соединение, BluetoothGattCallback, каталог, ожидающий запрос |
+| `commonMain/kotlin/gpt/ble/manager` | BleManager, BleConnection, UUIDs, bytes, devices, GATT models, errors, and states |
+| `commonMain/.../internal/scan` | ScanStore, ScanEntry, advertising packets |
+| `commonMain/.../internal/names` | System name validation and GATT Device Name decoding |
+| `commonMain/.../internal/gatt` | ManagedConnection and OperationQueue |
+| `commonMain/.../internal/pairing` | Waiting for the final pairing state |
+| `windowsMain/.../windows` | Public manager, NativeBridge, WindowsGattException |
+| `windowsMain/.../windows/scan` | Scan generations and native callback merging |
+| `windowsMain/.../windows/pairing` | Address reservation, pair/unpair, WinRT status mapping |
+| `windowsMain/.../windows/gatt` | Connection operations and JNI catalog decoding |
+| `windowsMain/.../windows/jni` | Loading the DLL from JAR resources |
+| `androidMain/.../android` | Public AndroidBleManager |
+| `androidMain/.../android/adapter` | Adapter availability and runtime permissions |
+| `androidMain/.../android/scan` | ScanCallback, ScanRecord, and AD section parsing |
+| `androidMain/.../android/pairing` | System broadcasts and pairing management |
+| `androidMain/.../android/gatt` | Connection, BluetoothGattCallback, catalog, and pending request |
 
-`sample-windows` содержит отдельные сценарии сканирования, GATT и сопряжения.
-В `buildSrc/.../buildlogic` находятся поиск CMake и задача сборки DLL.
-Все внешние координаты и версии прикладных зависимостей/плагинов находятся в
-`gradle/libs.versions.toml`; версии Wrapper и встроенных Gradle-плагинов задаёт Gradle.
-Settings-плагин toolchain resolver читает свою версию из этого же TOML до появления
-сгенерированных `libs` accessors.
+`sample-windows` contains separate scanning, GATT, and pairing scenarios.
+`buildSrc/.../buildlogic` contains CMake discovery and the DLL build task.
+All external dependency/plugin coordinates and versions are in
+`gradle/libs.versions.toml`; Gradle manages the Wrapper and built-in plugin versions.
+The settings toolchain resolver plugin reads its version from the same TOML before
+generated `libs` accessors are available.
 
-## Владение ресурсами
+## Resource ownership
 
-Менеджер владеет сканером, контроллером сопряжения и картой соединений. Scanner и
-pairing-controller используют тот же monitor, что connect/close. Поэтому выделение
-классов не создаёт независимых блокировок на ранее общих ресурсах.
+The manager owns the scanner, pairing controller, and connection map. The scanner
+and pairing controller use the same monitor as connect/close. Extracting these
+classes therefore does not introduce independent locks for previously shared resources.
 
-Соединение владеет каталогом и одной очередью операций. `ManagedConnection.terminate`
-атомарно помечает сессию закрытой, публикует причину, прекращает очередь и вызывает
-освобождение платформы. Повторный close не освобождает ресурсы второй раз.
+A connection owns its catalog and one operation queue. `ManagedConnection.terminate`
+atomically marks the session closed, publishes the reason, stops the queue, and
+releases platform resources. Repeated close calls do not release resources twice.
 
-## Операции и callbacks
+## Operations and callbacks
 
-`OperationQueue` сериализует запросы через coroutine Mutex. Он охватывает запуск и
-ожидание результата ОС. Timeout или отмена уже начатой операции закрывают соединение:
-иначе запоздавший ответ мог бы завершить следующий запрос.
+`OperationQueue` serializes requests with a coroutine Mutex. The lock covers both
+starting the operation and waiting for the OS result. A timeout or cancellation of
+an operation that has already started closes the connection; otherwise a late
+response could complete the next request.
 
-На Android Pending регистрируется до вызова BluetoothGatt API. Callback сверяет
-identity BluetoothGatt, вид операции и identity target. `Deferred.await` выполняется
-вне monitor. На API 33+ используются overloads callbacks с отдельным `value`;
-чтение изменяемого поля characteristic/descriptor сохраняется для старых API.
-Каталог Android не блокирует себя самостоятельно: его защищает monitor соединения.
+On Android, Pending is registered before calling the BluetoothGatt API. The callback
+checks BluetoothGatt identity, the operation kind, and target identity. `Deferred.await`
+runs outside the monitor. API 33+ uses callback overloads with a separate `value`;
+older APIs read the mutable characteristic/descriptor field. The Android catalog
+does not lock itself: the connection monitor protects it.
 
-На Windows блокирующие JNI-запросы выполняются на `Dispatchers.IO`. В C++ действует
-собственный deadline. После возвращения из connect проверяется отмена корутины;
-непринятое соединение закрывается. Native-ошибки переводятся в BleException с сохранением
-числового статуса и причины. MTU определяет сама Windows.
+On Windows, blocking JNI requests run on `Dispatchers.IO`. C++ enforces its own
+deadline. After connect returns, coroutine cancellation is checked; an unaccepted
+connection is closed. Native errors are translated into BleException while retaining
+the numeric status and cause. Windows determines the MTU.
 
-Коллектор уведомлений нужно запустить до включения CCCD. SharedFlow содержит буфер
-128 значений; переполнение завершает сессию с `NotificationOverflow`.
+Start the notifications collector before enabling CCCD. SharedFlow has a buffer
+of 128 values; overflow terminates the session with `NotificationOverflow`.
 
-## Имена, каталог и сопряжение
+## Names, catalog, and pairing
 
-ScanStore объединяет записи по нормализованному адресу. Рекламное, GATT- и системное
-имена хранятся отдельно, фильтры применяются после объединения. Отсутствующее имя
-в следующем пакете не стирает ранее полученное. Только рекламный пакет ставит
-`seenInCurrentScan=true`. Старые Windows callbacks отбрасываются по generation,
-Android callbacks — по identity активного callback.
+ScanStore merges records by normalized address. Advertised, GATT, and system names
+are stored separately, and filters run after merging. A missing name in a subsequent
+packet does not erase a previously received name. Only an advertising packet sets
+`seenInCurrentScan=true`. Old Windows callbacks are rejected by generation; Android
+callbacks are rejected by the active callback's identity.
 
-GATT-объекты различаются числовыми IDs: UUID может повторяться. Каталог стабилен до
-закрытия соединения. Изменение опубликованной базы требует нового подключения.
-На Windows отдельный запрос имени `1800/2a00` не требует discovery vendor-сервисов.
+Numeric IDs distinguish GATT objects because UUIDs may repeat. The catalog remains
+stable until the connection closes. A change to the published database requires a
+new connection. On Windows, the separate `1800/2a00` name request does not require
+discovery of vendor services.
 
-Сопряжение резервирует адрес против параллельного connect. На Android listener
-регистрируется до чтения состояния и запуска операции. Принятие createBond не является
-подтверждением сопряжения: ожидается конечный broadcast. Отмена ожидания не гарантирует
-откат действия ОС. Windows поддерживает ConfirmOnly через custom pairing.
+Pairing reserves the address against concurrent connect calls. On Android, the
+listener is registered before reading the state and starting the operation.
+Acceptance of createBond is not confirmation of pairing: the final broadcast must
+arrive. Cancelling the wait does not guarantee rollback of the OS action. Windows
+supports ConfirmOnly through custom pairing.
 
-## JNI-контракт
+## JNI contract
 
-При изменении границы Kotlin/C++ совместно проверяются:
+When changing the Kotlin/C++ boundary, check the following together:
 
-- `gpt.ble.manager.windows.NativeBridge` и все `Java_gpt_ble_manager_windows_NativeBridge_*` exports;
-- private callbacks NativeBridge и дескрипторы `GetMethodID` в `Registry.cpp`;
-- `gpt/ble/manager/windows/WindowsGattException` в `JniRuntime.cpp`;
-- числовой порядок AddressType/SubscriptionMode и строковый протокол GATT `S|...`, `C|...`, `D|...`.
+- `gpt.ble.manager.windows.NativeBridge` and all `Java_gpt_ble_manager_windows_NativeBridge_*` exports.
+- NativeBridge private callbacks and `GetMethodID` descriptors in `Registry.cpp`.
+- `gpt/ble/manager/windows/WindowsGattException` in `JniRuntime.cpp`.
+- The numeric order of AddressType/SubscriptionMode and the GATT string protocol `S|...`, `C|...`, `D|...`.
 
-Классы, привязанные по имени из JNI, нельзя независимо переносить или обфусцировать.
-Описание владения native-ресурсами находится в
-[README C++-модуля](../gpt-ble-manager/src/windowsMain/cpp/README.md).
+Classes bound by name through JNI must not be moved or obfuscated independently.
+Native resource ownership is described in the
+[C++ module README](../gpt-ble-manager/src/windowsMain/cpp/README.md).
 
-## Документация API
+## API documentation
 
 - [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html).
 - [Coroutine cancellation and timeouts](https://kotlinlang.org/docs/cancellation-and-timeouts.html).

@@ -42,7 +42,7 @@ void startScan(jlong handle, jlong generation)
                     for (uint32_t i = 0; i < manufacturers.Size(); ++i)
                     {
                         auto entry = manufacturers.GetAt(i);
-                        // Два первых байта — CompanyId little-endian; Kotlin отделяет их от payload.
+                        // The first two bytes are CompanyId in little-endian order; Kotlin separates them from the payload.
                         std::vector<uint8_t> data{
                             static_cast<uint8_t>(entry.CompanyId() & 255),
                             static_cast<uint8_t>(entry.CompanyId() >> 8)

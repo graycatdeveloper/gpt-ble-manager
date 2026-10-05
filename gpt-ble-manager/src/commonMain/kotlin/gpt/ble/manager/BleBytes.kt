@@ -1,6 +1,6 @@
 package gpt.ble.manager
 
-/** Immutable-значение с content equality: конструктор и toByteArray копируют массив. */
+/** Immutable value with content equality: both the constructor and toByteArray copy the array. */
 class BleBytes(bytes: ByteArray) {
 
     private val data = bytes.copyOf()

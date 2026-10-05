@@ -1,6 +1,6 @@
 /**
  * @file
- * Внутренние операции scan/Scanner. JNI экспортируется только из jni/NativeBridge.cpp.
+ * Internal scan/Scanner operations. JNI is exported only from jni/NativeBridge.cpp.
  */
 #pragma once
 
@@ -9,15 +9,15 @@
 namespace gpt::ble::manager::windows
 {
 /**
- * Запускает активное advertising-сканирование и отдельный поиск системных имён.
- * Оба watcher используют generation; объединение пакетов и фильтрация остаются в Kotlin.
+ * Starts active advertisement scanning and a separate system-name lookup. Both watchers use
+ * generation; Kotlin still handles packet merging and filtering.
  *
  * @see https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.advertisement.bluetoothleadvertisementwatcher?view=winrt-26100
  */
 void startScan(jlong handle, jlong generation);
 
 /**
- * Останавливает advertising и поиск системных имён текущего manager.
+ * Stops advertisement scanning and system-name lookup for the current manager.
  *
  * @see https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.advertisement.bluetoothleadvertisementwatcher?view=winrt-26100
  */

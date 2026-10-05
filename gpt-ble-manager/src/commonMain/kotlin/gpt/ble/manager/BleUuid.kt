@@ -1,6 +1,6 @@
 package gpt.ble.manager
 
-/** Канонический Bluetooth UUID: принимает SIG 16/32-bit или полный 128-bit UUID. */
+/** Canonical Bluetooth UUID: accepts SIG 16/32-bit UUIDs or a full 128-bit UUID. */
 @ConsistentCopyVisibility
 data class BleUuid private constructor(val value: String) {
 

@@ -12,7 +12,7 @@ namespace
 {
 struct Apartment
 {
-    // RPC_E_CHANGED_MODE сохраняет уже выбранную модель потока; её мы не освобождаем.
+    // RPC_E_CHANGED_MODE preserves the thread's existing apartment model; we do not uninitialize it.
     HRESULT result = RoInitialize(RO_INIT_MULTITHREADED);
 
     Apartment()

@@ -15,8 +15,8 @@ using namespace winrt::Windows::Devices::Bluetooth::Advertisement;
 using namespace winrt::Windows::Devices::Bluetooth::GenericAttributeProfile;
 using namespace winrt::Windows::Storage::Streams;
 
-// Тестовые пакеты строятся в памяти через WinRT: ни radio, ни GATT не открываются.
-// Проверки работают в Release: assert не используется, поскольку NDEBUG отключает его.
+// Test packets are built in memory through WinRT; neither the radio nor GATT is opened.
+// Checks also run in Release: assert is not used because NDEBUG disables it.
 void require(bool condition, char const* message)
 {
     if (!condition)

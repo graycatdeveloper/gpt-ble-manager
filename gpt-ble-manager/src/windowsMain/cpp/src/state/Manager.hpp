@@ -15,13 +15,13 @@ namespace gpt::ble::manager::windows
 struct Connection;
 
 /**
- * Владелец ресурсов одного WindowsBleManager.
- * У каждого экземпляра собственные сканеры, callback и соединения.
+ * Owns the resources of one WindowsBleManager. Each instance has its own scanners, callback, and
+ * connections.
  */
 struct Manager : std::enable_shared_from_this<Manager>
 {
     JavaVM* vm = nullptr;
-    // JNI global reference: живёт дольше исходного вызова create().
+    // JNI global reference: outlives the original create() call.
     jobject callback = nullptr;
     jmethodID advertisement{};
     jmethodID scanStopped{};
@@ -31,7 +31,7 @@ struct Manager : std::enable_shared_from_this<Manager>
     jmethodID notification{};
     jmethodID mtuChanged{};
     jmethodID adapterChanged{};
-    // Защищает watcher/token, radio и карту соединений; не JVM и не ОС целиком.
+    // Protects watchers/tokens, the radio, and the connection map, not the entire JVM or OS.
     std::mutex mutex;
     std::atomic<bool> closed{false};
     winrt::Windows::Devices::Bluetooth::Advertisement::BluetoothLEAdvertisementWatcher watcher{
@@ -39,7 +39,7 @@ struct Manager : std::enable_shared_from_this<Manager>
     };
     winrt::event_token receivedToken{};
     winrt::event_token stoppedToken{};
-    // Отдельный AEP watcher сообщает системные имена без фиктивных radio-пакетов.
+    // A separate AEP watcher reports system names without fabricating radio packets.
     winrt::Windows::Devices::Enumeration::DeviceWatcher nameWatcher{nullptr};
     winrt::event_token addedToken{};
     winrt::event_token updatedToken{};
@@ -50,10 +50,10 @@ struct Manager : std::enable_shared_from_this<Manager>
     std::map<jlong, std::shared_ptr<Connection>> connections;
 
     /**
-     * Вызов Kotlin с произвольного WinRT-потока. JNIEnv берётся для текущего потока,
-     * локальный frame резервирует ёмкость как минимум для 64 ссылок. Исключение callback логируется
-     * и очищается: его нельзя вернуть Java-вызывающему, которого у события нет.
-     * closed отсекает поздние события; generation дополнительно проверяется в Kotlin.
+     * Calls Kotlin from an arbitrary WinRT thread. Obtains JNIEnv for the current thread; the
+     * local frame reserves capacity for at least 64 references. Logs and clears callback
+     * exceptions because the event has no Java caller to receive them. closed rejects late events;
+     * Kotlin additionally checks generation.
      *
      * @see https://docs.oracle.com/en/java/javase/17/docs/specs/jni/functions.html#pushlocalframe
      */
@@ -87,15 +87,15 @@ struct Manager : std::enable_shared_from_this<Manager>
     }
 
     /**
-     * Отсоединяет оба сканера и их обработчики; повторный stop безопасен.
-     * Ссылки снимаются под mutex, WinRT Stop вызывается после освобождения mutex.
+     * Detaches both scanners and their handlers; repeated stop calls are safe. Releases references
+     * under the mutex, then calls WinRT Stop after releasing the mutex.
      */
     void stop();
 
     /**
-     * Помечает manager закрытым, останавливает сканеры, закрывает соединения.
-     * События, уже прошедшие проверку closed, могут завершаться параллельно.
-     * Global reference освобождает деструктор после завершения владельцев shared_ptr.
+     * Marks the manager closed, stops scanners, and closes connections. Events that already passed
+     * the closed check may complete concurrently. The destructor releases the global reference
+     * after the last shared_ptr owner is gone.
      */
     void close() noexcept;
     ~Manager();

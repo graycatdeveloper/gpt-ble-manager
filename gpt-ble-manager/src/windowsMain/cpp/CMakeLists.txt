@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(gpt-ble-windows LANGUAGES CXX)
 
-# JNI предоставляет JDK, WinRT — Windows SDK выбранного Visual Studio toolchain.
+# JNI comes from the JDK; WinRT comes from the Windows SDK of the selected Visual Studio toolchain.
 # https://cmake.org/cmake/help/latest/module/FindJNI.html
 find_package(JNI REQUIRED)
 
@@ -39,7 +39,7 @@ add_library(gpt-ble-windows SHARED
     src/state/Registry.hpp
 )
 
-# Все заголовки внутренние: публичным ABI библиотеки остаются JNI-экспорты.
+# All headers are internal: JNI exports remain the library's public ABI.
 target_include_directories(gpt-ble-windows PRIVATE
     ${JNI_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
@@ -49,14 +49,14 @@ target_compile_options(gpt-ble-windows PRIVATE /EHsc /utf-8 /W4)
 target_compile_definitions(gpt-ble-windows PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 target_link_libraries(gpt-ble-windows PRIVATE WindowsApp)
 
-# Статический MSVC runtime: получателю DLL не нужен отдельный VC++ Redistributable.
+# Static MSVC runtime: DLL consumers do not need a separate VC++ Redistributable.
 # https://cmake.org/cmake/help/latest/prop_tgt/MSVC_RUNTIME_LIBRARY.html
 set_property(TARGET gpt-ble-windows PROPERTY
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 )
 
-# Отдельный набор проверок форматов данных без BLE-устройства и без JVM.
-# По умолчанию выключен: обычная Gradle-сборка по-прежнему создаёт только DLL.
+# Separate data format checks that require neither a BLE device nor a JVM.
+# Disabled by default: a regular Gradle build still produces only the DLL.
 option(GPT_BLE_BUILD_NATIVE_TESTS "Build hardware-independent native contract tests" OFF)
 if(GPT_BLE_BUILD_NATIVE_TESTS)
     enable_testing()

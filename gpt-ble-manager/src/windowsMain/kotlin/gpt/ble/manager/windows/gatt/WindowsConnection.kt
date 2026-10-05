@@ -19,9 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Платформенная GATT-сессия Windows. Общие проверки и отмена запросов находятся в
- * ManagedConnection. Числовые IDs связаны с объектами только этой сессии; releasePlatform
- * освобождает их и удаляет соединение из менеджера через callback removed.
+ * Windows GATT session. Shared validation and request cancellation live in ManagedConnection.
+ * Numeric IDs refer only to objects in this session; releasePlatform releases them and removes the
+ * connection from the manager through the removed callback.
  */
 internal class WindowsConnection(
     private val native: NativeBridge,

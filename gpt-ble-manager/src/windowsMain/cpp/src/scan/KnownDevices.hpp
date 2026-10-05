@@ -1,6 +1,6 @@
 /**
  * @file
- * Отдельный источник метаданных Windows; сам по себе не подтверждает присутствие устройства рядом.
+ * A separate Windows metadata source; by itself, it does not confirm that a device is nearby.
  */
 #pragma once
 
@@ -13,17 +13,17 @@ namespace gpt::ble::manager::windows
 struct Manager;
 
 /**
- * AssociationEndpoint watcher дополняет advertising именами из Windows.
- * Added хранит снимок; Updated сначала применяет delta через Update.
- * Событие Removed удаляет только системную запись, а не результат radio-сканирования.
+ * An AssociationEndpoint watcher supplements advertising data with Windows names. Added stores a
+ * snapshot; Updated first applies the delta through Update. Removed deletes only the system
+ * record, not the radio scan result.
  *
  * @see https://learn.microsoft.com/en-us/uwp/api/windows.devices.enumeration.devicewatcher
  */
 void startNameWatcher(std::shared_ptr<Manager> const& owner, jlong generation);
 
 /**
- * Ошибка дополнительного поиска имени передаётся отдельным callback.
- * Успешное advertising-сканирование из-за неё не останавливается.
+ * Reports supplementary name lookup failures through a separate callback. Such a failure does not
+ * stop a successful advertisement scan.
  */
 void nameLookupFailed(
     std::weak_ptr<Manager> const& weak,

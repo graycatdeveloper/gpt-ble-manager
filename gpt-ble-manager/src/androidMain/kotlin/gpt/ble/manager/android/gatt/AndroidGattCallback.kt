@@ -9,9 +9,9 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.os.Build
 
 /**
- * Адаптирует callbacks Android к одной ожидающей операции соединения. На API 33+ используются
- * value-параметры; legacy callback читается только до API 33, иначе один ответ мог бы завершить
- * операцию дважды. Проверка identity GATT у владельца.
+ * Adapts Android callbacks to the connection's single pending operation. Uses value parameters on
+ * API 33+; the legacy callback is handled only below API 33 to avoid completing an operation twice
+ * for the same response. The owner checks GATT identity.
  *
  * @see <a
  *   href="https://developer.android.com/reference/android/bluetooth/BluetoothGattCallback">BluetoothGattCallback</a>

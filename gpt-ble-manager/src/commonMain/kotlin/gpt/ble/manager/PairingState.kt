@@ -1,8 +1,8 @@
 package gpt.ble.manager
 
 /**
- * Состояние локального сопряжения ОС. Оно независимо от подключения и доступа к GATT. Unknown
- * означает отсутствие достоверного снимка, а не доказанное отсутствие сопряжения.
+ * Local OS pairing state, independent of the connection and GATT access. Unknown means no reliable
+ * snapshot is available, not that the device is confirmed to be unpaired.
  */
 enum class PairingState {
     Unknown,

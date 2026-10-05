@@ -3,6 +3,7 @@ foojay-resolver = "1.0.0"
 kotlin = "2.4.20"
 agp = "9.4.1"
 kotlinx-coroutines = "1.11.0"
+maven-publish = "0.37.0"
 ble-manager = "0.2.3-local"
 android-compileSdk = "37"
 android-minSdk = "26"
@@ -14,6 +15,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 
 [plugins]
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }

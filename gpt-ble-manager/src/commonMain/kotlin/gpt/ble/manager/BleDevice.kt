@@ -13,10 +13,10 @@ enum class DeviceNameSource {
 }
 
 /**
- * Неизменяемый снимок устройства, объединяемый по нормализованному MAC-адресу. name остаётся null,
- * если имя не известно; только displayName подставляет адрес для UI. Системная запись не
- * гарантирует присутствие устройства рядом: проверяйте seenInCurrentScan. Имя и RSSI могут
- * измениться после следующего advertising/scan-response пакета.
+ * Immutable device snapshot merged by normalized MAC address. name stays null when unknown; only
+ * displayName falls back to the address for the UI. A system record does not guarantee that the
+ * device is nearby: check seenInCurrentScan. The name and RSSI may change after the next
+ * advertising or scan response packet.
  */
 data class BleDevice(
     val address: String,

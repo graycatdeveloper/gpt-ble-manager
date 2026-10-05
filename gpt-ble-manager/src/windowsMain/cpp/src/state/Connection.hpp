@@ -1,6 +1,6 @@
 /**
  * @file
- * Состояние соединения не является публичным C++ API; Kotlin обращается по числовому handle.
+ * Connection state is not part of the public C++ API; Kotlin accesses it through a numeric handle.
  */
 #pragma once
 
@@ -19,23 +19,23 @@ namespace gpt::ble::manager::windows
 struct Manager;
 
 /**
- * Ресурсы одного соединения: device/session, каталог ATT handles, подписки.
- * close идемпотентен; удаление последней shared_ptr также освобождает ресурсы.
- * Закрытые объекты могут дожить до завершения уже начатого callback.
+ * Resources for one connection: device/session, ATT handle catalog, and subscriptions. close is
+ * idempotent; destroying the last shared_ptr also releases resources. Closed objects may remain
+ * alive until a callback already in progress completes.
  *
  * @see https://learn.microsoft.com/en-us/windows/apps/develop/cpp-winrt/weak-references
  */
 struct Connection
 {
     jlong id = 0;
-    // Обратная ссылка слабая: Manager уже владеет Connection через shared_ptr.
+    // The back-reference is weak because Manager already owns Connection through shared_ptr.
     std::weak_ptr<Manager> manager;
     winrt::Windows::Devices::Bluetooth::BluetoothLEDevice device{nullptr};
     winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSession session{nullptr};
-    // Защищает каталог и winrt::event_token; ожидание WinRT выполняется вне этого mutex.
+    // Protects the catalog and winrt::event_token; WinRT waits run outside this mutex.
     std::mutex mutex;
     std::atomic<bool> closed{false};
-    // GattServicesChanged при первом заполнении каталога ещё нечего инвалидировать.
+    // GattServicesChanged has nothing to invalidate while the catalog is being populated for the first time.
     std::atomic<bool> catalogReady{false};
     std::vector<winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceService>
         services;
@@ -54,16 +54,16 @@ struct Connection
     winrt::event_token servicesToken{};
 
     /**
-     * Сначала отсоединяет коллекции под mutex, затем отзывает события и закрывает
-     * ресурсы вне mutex. Порядок best-effort cleanup сохранён из исходной реализации.
+     * Detaches collections under the mutex first, then revokes events and closes resources outside
+     * it. Preserves the original implementation's best-effort cleanup order.
      */
     void close() noexcept;
     ~Connection();
 };
 
 /**
- * Отправляет событие разрыва в Kotlin, где завершается ManagedConnection.
- * Сам callback не удаляет запись из реестра.
+ * Sends a disconnection event to Kotlin, which terminates ManagedConnection. The callback itself
+ * does not remove the registry entry.
  */
 void disconnected(std::shared_ptr<Connection> const& current, wchar_t const* message);
 } // namespace gpt::ble::manager::windows

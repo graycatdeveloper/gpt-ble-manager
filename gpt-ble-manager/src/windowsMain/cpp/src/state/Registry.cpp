@@ -50,8 +50,8 @@ jlong createManager(JNIEnv* env, jobject self)
     {
         throw std::bad_alloc();
     }
-    // Дескрипторы — часть JNI-контракта, включая порядок и типы аргументов.
-    // Несовпадение оставляет pending Java exception; частичный manager не публикуется.
+    // Descriptors are part of the JNI contract, including argument order and types.
+    // A mismatch leaves a pending Java exception; a partially initialized manager is not published.
     auto cls = env->GetObjectClass(self);
     owner->advertisement = env->GetMethodID(
         cls,

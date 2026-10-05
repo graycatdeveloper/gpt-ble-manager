@@ -11,9 +11,9 @@ import gpt.ble.manager.GattDescriptor
 import gpt.ble.manager.GattService
 
 /**
- * Стабильные числовые IDs для объектов Android GATT, включая повторяющиеся UUID. Внутри нет mutex:
- * все методы вызываются под monitor AndroidConnection. clear сохраняет счётчик, как исходная
- * реализация; IDs не переиспользуются при rebuild.
+ * Stable numeric IDs for Android GATT objects, including duplicate UUIDs. There is no internal
+ * mutex: all methods run under the AndroidConnection monitor. clear preserves the counter, as in
+ * the original implementation; rebuilding the catalog does not reuse IDs.
  */
 internal class AndroidGattCatalog(private val id: String) {
     private val characteristics = mutableMapOf<Int, BluetoothGattCharacteristic>()

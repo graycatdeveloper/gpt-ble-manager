@@ -1,6 +1,6 @@
 package gpt.ble.manager
 
-/** IDs уникальны внутри соединения, даже если устройство повторяет один UUID. */
+/** IDs are unique within a connection, even when the device repeats a UUID. */
 data class GattService(
     val id: Int,
     val uuid: BleUuid,
@@ -8,9 +8,9 @@ data class GattService(
 )
 
 /**
- * Характеристика конкретного соединения. ID различает одинаковые UUID в одном каталоге. После
- * закрытия соединения старые объекты не используются: validation проверяет connectionId и
- * принадлежность к опубликованному каталогу. properties содержит исходную GATT bit mask.
+ * A characteristic belonging to a specific connection. Its ID distinguishes identical UUIDs in one
+ * catalog. Objects from a closed connection cannot be reused: validation checks connectionId and
+ * membership in the published catalog. properties holds the original GATT bit mask.
  */
 data class GattCharacteristic(
     val connectionId: String,
@@ -37,8 +37,8 @@ data class GattCharacteristic(
 }
 
 /**
- * Дескриптор принадлежит характеристике по characteristicId, а не только по UUID. CCCD (2902)
- * изменяется через subscribe, чтобы согласовать локальную подписку и устройство.
+ * A descriptor belongs to a characteristic through characteristicId, not just its UUID. CCCD (2902)
+ * is changed through subscribe to keep the local subscription and device in sync.
  */
 data class GattDescriptor(
     val connectionId: String,
@@ -47,7 +47,7 @@ data class GattDescriptor(
     val uuid: BleUuid,
 )
 
-/** Уведомление с immutable-копией байтов; последующий callback не меняет полученное значение. */
+/** Notification with an immutable copy of the bytes; later callbacks cannot change its value. */
 data class CharacteristicValue(val characteristic: GattCharacteristic, val value: BleBytes)
 
 enum class WriteMode {

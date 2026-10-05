@@ -3,8 +3,8 @@ package gpt.ble.manager.windows.jni
 import java.nio.file.Files
 
 /**
- * Один раз извлекает DLL из JAR во временный файл. Флаг выставляется только после успешного
- * System.load; @Synchronized защищает параллельное создание менеджеров.
+ * Extracts the DLL from the JAR to a temporary file once. Sets the flag only after System.load
+ * succeeds; @Synchronized protects concurrent manager creation.
  *
  * @see <a
  *   href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/System.html#load(java.lang.String)">System.load</a>

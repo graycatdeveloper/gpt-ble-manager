@@ -4,9 +4,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Одна GATT-сессия. Все запросы сериализованы: параллельные вызовы ждут своей очереди. Таймаут или
- * отмена выполняющегося запроса завершают сессию, чтобы запоздавший callback не был принят как
- * результат следующего запроса. Уведомления идут независимо через SharedFlow.
+ * A single GATT session. All requests are serialized: concurrent calls wait their turn. A timeout
+ * or cancellation of a running request terminates the session so that a late callback cannot be
+ * mistaken for the next request's result. Notifications arrive independently through SharedFlow.
  */
 interface BleConnection {
     val id: String
@@ -24,8 +24,9 @@ interface BleConnection {
     val notifications: SharedFlow<CharacteristicValue>
 
     /**
-     * Возвращает стабильный каталог этой сессии. Повторный успешный вызов использует его снимок.
-     * Изменение уже опубликованной GATT-базы завершает сессию: нужны новое подключение и discovery.
+     * Returns this session's stable catalog. Subsequent successful calls reuse its snapshot. A
+     * change to the published GATT database terminates the session and requires a new connection
+     * and service discovery.
      */
     suspend fun discoverServices(): List<GattService>
 
@@ -35,13 +36,14 @@ interface BleConnection {
     suspend fun readDeviceName(): String?
 
     /**
-     * Читает характеристику из текущего каталога; проверяет свойство Read и принадлежность сессии.
+     * Reads a characteristic from the current catalog, checking its Read property and session
+     * ownership.
      */
     suspend fun read(characteristic: GattCharacteristic): BleBytes
 
     /**
-     * Копирует байты до постановки в очередь. Проверяет режим записи и размер не более MTU − 3;
-     * разбиение команд на пакеты определяется протоколом приложения.
+     * Copies bytes before enqueueing the request. Validates the write mode and a size of at most
+     * MTU - 3; splitting commands into packets is defined by the application protocol.
      */
     suspend fun write(
         characteristic: GattCharacteristic,
@@ -49,16 +51,19 @@ interface BleConnection {
         mode: WriteMode = WriteMode.WithResponse,
     )
 
-    /** Читает дескриптор текущей сессии. Повторяющиеся UUID различаются числовыми ID. */
+    /** Reads a descriptor from the current session. Numeric IDs distinguish duplicate UUIDs. */
     suspend fun readDescriptor(descriptor: GattDescriptor): BleBytes
 
-    /** Записывает копию данных в дескриптор. Для CCCD используйте subscribe, а не прямую запись. */
+    /**
+     * Writes a copy of the data to a descriptor. Use subscribe for CCCD instead of writing
+     * directly.
+     */
     suspend fun writeDescriptor(descriptor: GattDescriptor, value: ByteArray)
 
     /**
-     * Настраивает локальный обработчик и удалённый CCCD. Запустите collector notifications до
-     * вызова. Ошибка настройки закрывает сессию, так как состояние подписки становится
-     * недостоверным.
+     * Configures the local handler and remote CCCD. Start the notifications collector before
+     * calling this method. A configuration error closes the session because the subscription state
+     * can no longer be trusted.
      */
     suspend fun subscribe(
         characteristic: GattCharacteristic,
@@ -66,12 +71,14 @@ interface BleConnection {
     )
 
     /**
-     * Принимает 23..517. Android отправляет запрос; Windows возвращает согласованный ОС MTU.
-     * Возвращаемое значение может отличаться от запрошенного.
+     * Accepts 23..517. Android sends a request; Windows returns the MTU negotiated by the OS. The
+     * returned value may differ from the requested value.
      */
     suspend fun requestMtu(size: Int): Int
 
-    /** Идемпотентно завершает сессию, ожидающие операции и освобождает платформенные ресурсы. */
+    /**
+     * Idempotently terminates the session and pending operations, then releases platform resources.
+     */
     fun close()
 }
 

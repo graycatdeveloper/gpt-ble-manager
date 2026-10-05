@@ -3,9 +3,9 @@ package gpt.ble.manager.windows
 import gpt.ble.manager.windows.jni.NativeLibrary
 
 /**
- * JNI-контракт с C++: полное JVM-имя класса, external-сигнатуры и имена private callbacks должны
- * совпадать с NativeBridge.cpp и Registry.cpp. Callback может прийти с native-потока; владение
- * JNIEnv/global references и перевод исключений реализованы в C++.
+ * JNI contract with C++: the fully qualified JVM class name, external signatures, and private
+ * callback names must match NativeBridge.cpp and Registry.cpp. A callback may arrive on a native
+ * thread; JNIEnv/global reference ownership and exception translation are handled in C++.
  *
  * @see <a href="https://docs.oracle.com/en/java/javase/21/docs/specs/jni/design.html">JNI
  *   design</a>

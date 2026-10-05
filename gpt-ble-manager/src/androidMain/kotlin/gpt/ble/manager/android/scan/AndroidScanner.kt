@@ -23,9 +23,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Владеет BluetoothLeScanner и одним ScanCallback. Сравнение identity callback отбрасывает события
- * после stop/restart. Общий с manager monitor сохраняет порядок сканирования, записи GATT-имени и
- * закрытия ресурсов.
+ * Owns BluetoothLeScanner and a single ScanCallback. Callback identity checks discard events after
+ * stop/restart. Sharing the manager monitor preserves the ordering of scanning, GATT name updates,
+ * and resource cleanup.
  *
  * @see <a
  *   href="https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner">BluetoothLeScanner</a>

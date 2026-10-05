@@ -11,8 +11,9 @@ import gpt.ble.manager.internal.scan.ScanStore
 import kotlinx.coroutines.flow.map
 
 /**
- * Переносит advertising и системное имя как разные источники. UUID из Service Data дополняют
- * Service UUIDs. Вызывается только под monitor сканера: ScanStore не потокобезопасен.
+ * Transfers advertising data and the system name as separate sources. UUIDs from Service Data
+ * supplement Service UUIDs. Called only under the scanner monitor because ScanStore is not
+ * thread-safe.
  */
 internal fun acceptAndroidAdvertisement(store: ScanStore, result: ScanResult) {
     val record = result.scanRecord
@@ -47,8 +48,8 @@ internal fun acceptAndroidAdvertisement(store: ScanStore, result: ScanResult) {
 }
 
 /**
- * AD-структура: length включает тип, но не собственный байт length; 0x09 — полное имя. Обрезанная
- * или завершающая секция прекращает чтение, не выходя за пределы массива.
+ * AD structure: length includes the type but not the length byte itself; 0x09 denotes the complete
+ * name. A truncated or terminating section stops parsing without reading beyond the array.
  *
  * @see <a href="https://www.bluetooth.com/specifications/assigned-numbers/">Bluetooth Assigned
  *   Numbers</a>

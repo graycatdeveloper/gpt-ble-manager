@@ -1,8 +1,8 @@
 package gpt.ble.manager.internal.names
 
 /**
- * Системное имя не должно быть MAC-адресом, замаскированным под имя устройства. При сравнении
- * игнорируются разделители; исходное читаемое имя возвращается без замены.
+ * A system name must not be a MAC address presented as a device name. Comparison ignores
+ * separators; a valid readable name is returned unchanged.
  */
 internal fun usableSystemName(address: String, name: String?): String? =
     name?.trim()?.takeIf {
@@ -12,8 +12,8 @@ internal fun usableSystemName(address: String, name: String?): String? =
     }
 
 /**
- * Строго декодирует UTF-8 из Generic Access / Device Name. Завершающие NUL удаляются;
- * пустое/пробельное имя и повреждённый UTF-8 дают null. Другие символы имени сохраняются.
+ * Strictly decodes UTF-8 from Generic Access / Device Name. Removes trailing NULs; an empty or
+ * whitespace-only name and malformed UTF-8 return null. Other name characters are preserved.
  */
 internal fun decodeDeviceName(bytes: ByteArray): String? = runCatching {
     bytes.decodeToString(throwOnInvalidSequence = true).trimEnd('\u0000').takeIf { it.isNotBlank() }

@@ -8,8 +8,9 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Ждёт конечное состояние сопряжения ОС: принятие createBond ещё не означает успех. Listener
- * регистрируется до чтения состояния и запуска; finally снимает его при любом исходе.
+ * Waits for the final OS pairing state: acceptance of createBond does not yet mean success.
+ * Registers the listener before reading the state and starting the operation; finally removes it
+ * regardless of the outcome.
  */
 internal class BondOperation(private val target: PairingState) {
     private val events = Channel<PairingState>(Channel.UNLIMITED)

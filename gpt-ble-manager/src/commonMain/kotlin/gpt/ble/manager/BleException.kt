@@ -1,8 +1,9 @@
 package gpt.ble.manager
 
 /**
- * Общие категории ошибок платформ. Нативный статус и исходное исключение доступны через
- * сообщение/cause; успешное начало операции не считается её успешным завершением.
+ * Shared error categories across platforms. The native status and original exception are available
+ * through the message/cause; successfully starting an operation does not mean it completed
+ * successfully.
  */
 enum class BleError {
     NotReady,
@@ -17,6 +18,6 @@ enum class BleError {
     NotificationOverflow,
 }
 
-/** Ошибка BLE-операции с переносимой категорией [code] и сохранённой платформенной причиной. */
+/** BLE operation error with a portable [code] category and the original platform cause. */
 class BleException(val code: BleError, message: String, cause: Throwable? = null) :
     Exception(message, cause)

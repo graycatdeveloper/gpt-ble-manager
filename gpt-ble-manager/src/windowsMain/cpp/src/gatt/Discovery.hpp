@@ -1,6 +1,6 @@
 /**
  * @file
- * Внутренние операции gatt/Discovery. JNI экспортируется только из jni/NativeBridge.cpp.
+ * Internal gatt/Discovery operations. JNI is exported only from jni/NativeBridge.cpp.
  */
 #pragma once
 
@@ -9,18 +9,18 @@
 namespace gpt::ble::manager::windows
 {
 /**
- * Читает только Generic Access 1800 / Device Name 2a00.
- * Отказ другого сервиса не должен препятствовать чтению имени.
- * nullptr означает отсутствие читаемой характеристики; пустой byte[] остаётся пустым значением.
+ * Reads only Generic Access 1800 / Device Name 2a00. Failure of another service must not prevent
+ * reading the name. nullptr means there is no readable characteristic; an empty byte[] remains an
+ * empty value.
  *
  * @see https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/gatt-client
  */
 jbyteArray readGattDeviceName(JNIEnv* env, jlong handle, jlong id);
 
 /**
- * Строит полный каталог во временных картах и публикует его атомарно.
- * Сохраняет протокол S|service|uuid, C|service|char|uuid|properties, D|char|desc|uuid.
- * Ошибка любого шага не выдаётся за успешный неполный каталог.
+ * Builds the complete catalog in temporary maps and publishes it atomically. Preserves the
+ * S|service|uuid, C|service|char|uuid|properties, D|char|desc|uuid protocol. Failure at any step
+ * is not reported as a successful partial catalog.
  *
  * @see https://learn.microsoft.com/en-us/windows/apps/develop/devices-sensors/gatt-client
  */

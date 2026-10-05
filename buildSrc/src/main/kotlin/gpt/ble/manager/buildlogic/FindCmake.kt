@@ -9,8 +9,8 @@ import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.process.ExecOperations
 
 /**
- * Ленивый поиск CMake: PATH, стандартная установка, затем Visual Studio через vswhere. ValueSource
- * позволяет явно переопределить результат свойством или переменной окружения.
+ * Lazily locates CMake: PATH, the standard installation, then Visual Studio through vswhere.
+ * ValueSource allows the result to be explicitly overridden by a property or environment variable.
  *
  * @see <a
  *   href="https://docs.gradle.org/current/javadoc/org/gradle/api/provider/ValueSource.html">ValueSource</a>

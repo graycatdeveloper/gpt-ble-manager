@@ -13,9 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Pair/unpair резервируют тот же адрес, что connect. finally освобождает резервирование при успехе,
- * ошибке и отмене; результат WinRT классифицируется отдельно в WindowsPairing. Блокирующее native
- * ожидание выполняется на Dispatchers.IO.
+ * Pair/unpair reserve the same address as connect. finally releases the reservation on success,
+ * error, or cancellation; WindowsPairing classifies the WinRT result separately. The blocking
+ * native wait runs on Dispatchers.IO.
  */
 internal class WindowsPairingController(
     private val native: NativeBridge,

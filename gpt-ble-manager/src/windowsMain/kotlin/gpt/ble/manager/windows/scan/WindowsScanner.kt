@@ -16,9 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
- * Владеет поколением сканирования и объединением advertising/системных/GATT-имён. Использует тот же
- * monitor, что и manager.close(): поздние native callbacks не публикуют данные нового сканирования.
- * Вызовы JNI и границы synchronized сохранены.
+ * Owns the scan generation and merges advertising, system, and GATT names. Uses the same monitor as
+ * manager.close(): late native callbacks cannot publish data into a new scan. JNI calls and
+ * synchronized boundaries are preserved.
  */
 internal class WindowsScanner(
     private val lock: Any,

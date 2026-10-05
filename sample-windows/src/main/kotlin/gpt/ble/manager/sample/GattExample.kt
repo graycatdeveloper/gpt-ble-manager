@@ -14,9 +14,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * Читает стандартные атрибуты и опционально проверяет уведомления. Listener ставится до CCCD; после
- * проверки CCCD отключается, затем закрывается соединение. Команды в vendor write-характеристики
- * этот пример не отправляет.
+ * Reads standard attributes and optionally checks notifications. Registers the listener before
+ * enabling CCCD; after the check, disables CCCD and closes the connection. This example does not
+ * send commands to vendor write characteristics.
  */
 internal suspend fun CoroutineScope.inspectGatt(
     manager: BleManager,

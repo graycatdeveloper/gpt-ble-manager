@@ -11,8 +11,8 @@ import gpt.ble.manager.AdapterState
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Снимок доступности адаптера с учётом runtime permissions API 31+. Не запрашивает разрешения
- * самостоятельно: Activity решает, когда показывать UI.
+ * Adapter availability snapshot that accounts for runtime permissions on API 31+. Does not request
+ * permissions itself: the Activity decides when to show the UI.
  *
  * @see <a
  *   href="https://developer.android.com/develop/connectivity/bluetooth/bt-permissions">Bluetooth

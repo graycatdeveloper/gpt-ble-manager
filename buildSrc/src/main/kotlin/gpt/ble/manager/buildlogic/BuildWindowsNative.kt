@@ -15,8 +15,8 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
 
 /**
- * Собирает Windows x64 DLL и копирует её в ресурсы JVM-артефакта. Исходники и вложенные заголовки —
- * inputs, CMake cache — local state, DLL — output.
+ * Builds the Windows x64 DLL and copies it into the JVM artifact's resources. Source files and
+ * nested headers are inputs, the CMake cache is local state, and the DLL is the output.
  *
  * @see <a href="https://docs.gradle.org/current/userguide/incremental_build.html">Incremental
  *   build</a>

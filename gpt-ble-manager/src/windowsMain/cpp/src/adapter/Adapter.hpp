@@ -1,6 +1,6 @@
 /**
  * @file
- * Внутренние операции adapter/Adapter. JNI экспортируется только из jni/NativeBridge.cpp.
+ * Internal adapter/Adapter operations. JNI is exported only from jni/NativeBridge.cpp.
  */
 #pragma once
 
@@ -9,8 +9,8 @@
 namespace gpt::ble::manager::windows
 {
 /**
- * Проверяет BLE-адаптер и radio; единожды регистрирует событие изменения питания.
- * Возвращает исходные коды Kotlin: 0 Ready, 1 PoweredOff, 2 PermissionRequired, 3 Unsupported.
+ * Checks the BLE adapter and radio; registers the power state change event once. Returns the
+ * original Kotlin codes: 0 Ready, 1 PoweredOff, 2 PermissionRequired, 3 Unsupported.
  *
  * @see https://learn.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.bluetoothadapter
  */
