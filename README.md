@@ -1,6 +1,6 @@
 # gpt-ble-manager
 
-[![Maven Central: publication pending](https://img.shields.io/badge/Maven_Central-publication_pending-lightgrey?logo=apachemaven)](docs/PUBLISHING.md)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.graycatdeveloper/gpt-ble-manager)](https://central.sonatype.com/artifact/io.github.graycatdeveloper/gpt-ble-manager)
 
 A Kotlin Multiplatform BLE client for **Windows x64 (JVM + C++/WinRT)** and
 **Android 8.0+ (API 26+)**. The shared API is in the `gpt.ble.manager` package.
