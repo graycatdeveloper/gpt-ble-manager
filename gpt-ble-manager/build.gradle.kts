@@ -92,7 +92,10 @@ tasks
     .matching { it.name.endsWith("JavadocJar") }
     .configureEach {
         from(rootProject.file("README.md"))
-        from(rootProject.file("docs")) { into("docs") }
+        from(rootProject.file("docs")) {
+            into("docs")
+            exclude("PUBLISHING.md")
+        }
     }
 
 publishing {

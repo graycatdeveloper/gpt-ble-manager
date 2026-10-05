@@ -9,8 +9,7 @@ A Kotlin Multiplatform BLE client for **Windows x64 (JVM + C++/WinRT)** and
 with implementation, refactoring, tests, and documentation. Project maintainers
 remain responsible for accepting changes and releasing versions.
 
-The main code is licensed under **[MIT](LICENSE)**. The project is actively developed;
-the current local build version is `0.2.3-local`.
+The main code is licensed under **[MIT](LICENSE)**. The project is actively developed.
 
 ## Features
 
@@ -31,7 +30,7 @@ the current local build version is `0.2.3-local`.
 Peripheral/GATT server mode, automatic reconnection, iOS, Linux, and macOS are
 outside the current API's scope.
 
-## Building
+## Building from source
 
 Tool and dependency versions are defined in
 [`gradle/libs.versions.toml`](gradle/libs.versions.toml): Kotlin 2.4.20,
@@ -49,7 +48,6 @@ From the repository root in PowerShell:
 
 ```powershell
 .\gradlew.bat :gpt-ble-manager:allTests :gpt-ble-manager:assemble
-.\gradlew.bat :gpt-ble-manager:publishToMavenLocal
 ```
 
 Gradle searches for CMake in `PATH`, its standard installation, and Visual Studio.
@@ -65,14 +63,11 @@ The Windows artifact requires its DLL to be built on Windows.
 
 ## Adding the dependency
 
-After `publishToMavenLocal`, add the local repository to your application's settings:
+Add Maven Central to your application's settings:
 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
-        mavenLocal {
-            content { includeGroup("gpt.ble.manager") }
-        }
         google()
         mavenCentral()
     }
@@ -85,7 +80,7 @@ Kotlin Multiplatform:
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("gpt.ble.manager:gpt-ble-manager:0.2.3-local")
+            implementation("io.github.graycatdeveloper:gpt-ble-manager:0.2.3")
         }
     }
 }
@@ -95,19 +90,12 @@ A regular JVM application on Windows:
 
 ```kotlin
 dependencies {
-    implementation("gpt.ble.manager:gpt-ble-manager-windows:0.2.3-local")
+    implementation("io.github.graycatdeveloper:gpt-ble-manager-windows:0.2.3")
 }
 ```
 
-These instructions use a local publication. They do not imply that this version is
-available on Maven Central or GitHub Packages. After republishing the same version,
-refresh the consumer's dependencies with `--refresh-dependencies`.
-
-The `:gpt-ble-manager:publish` task also publishes to this repository's `build/repository`.
-Override the directory with `-PlocalRepositoryPath=<path>`.
-
-For public releases, see [Publishing to Maven Central](docs/PUBLISHING.md).
-The header badge remains marked as pending until the first release is available.
+The Windows dependency includes the native DLL. Visual Studio, CMake, and the Windows SDK
+are only needed when building the library from source.
 
 ## Creating a manager
 
@@ -263,11 +251,10 @@ device's values.
 - [C++/WinRT, JNI, and CLion setup](gpt-ble-manager/src/windowsMain/cpp/README.md).
 - [Contributing guidelines](CONTRIBUTING.md).
 - [Validation and its limitations](TEST_REPORT.md).
-- [Publishing to Maven Central](docs/PUBLISHING.md).
 
 Include the OS, library version, reproduction steps, `BleException.code`, and stack
 trace when reporting an issue. Remove device addresses and other personal data
-before publishing logs.
+before sharing logs.
 
 ## License
 
