@@ -1,5 +1,6 @@
 package gpt.ble.manager
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -9,6 +10,33 @@ import kotlinx.coroutines.flow.StateFlow
  * mistaken for the next request's result. Notifications arrive independently through SharedFlow.
  */
 interface BleConnection {
+    val capabilities: BleCapabilities
+        get() = BleCapabilities()
+
+    /** Shared, reference-counted CCCD ownership. Collecting enables; cancellation disables. */
+    fun observe(
+        characteristic: GattCharacteristic,
+        mode: SubscriptionMode = SubscriptionMode.Notify,
+    ): Flow<BleBytes>
+
+    suspend fun readRssi(): Int = unsupported("Remote RSSI")
+
+    suspend fun readPhy(): PhyState = unsupported("PHY query")
+
+    suspend fun setPreferredPhy(
+        transmit: Set<BlePhy>,
+        receive: Set<BlePhy>,
+        coding: PhyCoding = PhyCoding.Any,
+    ): PhyState = unsupported("PHY preference")
+
+    /** Requests a preference; the peripheral and OS decide the actual parameters. */
+    suspend fun requestConnectionPriority(priority: ConnectionPriority): Unit =
+        unsupported("Connection priority")
+
+    suspend fun requestPreferredConnectionParameters(
+        parameters: PreferredConnectionParameters
+    ): Unit = unsupported("Preferred connection parameters")
+
     val id: String
     val device: BleDevice
     /** Latest device snapshot, including a name learned from GATT. */

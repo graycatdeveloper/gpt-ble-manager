@@ -101,6 +101,15 @@ internal class AndroidGattCallback(private val owner: AndroidConnection) : Bluet
         value: ByteArray,
     ) = owner.changed(gatt, characteristic, value)
 
+    override fun onReadRemoteRssi(gatt: BluetoothGatt, rssi: Int, status: Int) =
+        owner.complete(gatt, "rssi", null, status, byteArrayOf(rssi.toByte()))
+
+    override fun onPhyRead(gatt: BluetoothGatt, txPhy: Int, rxPhy: Int, status: Int) =
+        owner.complete(gatt, "readPhy", null, status, byteArrayOf(txPhy.toByte(), rxPhy.toByte()))
+
+    override fun onPhyUpdate(gatt: BluetoothGatt, txPhy: Int, rxPhy: Int, status: Int) =
+        owner.complete(gatt, "setPhy", null, status, byteArrayOf(txPhy.toByte(), rxPhy.toByte()))
+
     override fun onServiceChanged(gatt: BluetoothGatt) {
         owner.serviceChanged(gatt)
     }

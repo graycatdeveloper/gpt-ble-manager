@@ -9,6 +9,7 @@ add_library(gpt-ble-windows SHARED
     src/adapter/Adapter.cpp
     src/bluetooth/BluetoothUtils.cpp
     src/gatt/AttributeOperations.cpp
+    src/gatt/ConnectionPreferences.cpp
     src/gatt/ConnectionOperations.cpp
     src/gatt/Discovery.cpp
     src/gatt/Subscriptions.cpp

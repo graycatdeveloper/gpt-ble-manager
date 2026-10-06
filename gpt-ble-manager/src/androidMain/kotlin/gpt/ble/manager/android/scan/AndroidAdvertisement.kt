@@ -41,6 +41,10 @@ internal fun acceptAndroidAdvertisement(store: ScanStore, result: ScanResult) {
                 connectable = result.isConnectable,
                 serviceUuids = uuids,
                 manufacturerData = data,
+                serviceData =
+                    record?.serviceData.orEmpty().entries.associate { (uuid, bytes) ->
+                        BleUuid.parse(uuid.uuid.toString()) to BleBytes(bytes)
+                    },
             ),
             completeName = complete,
         )

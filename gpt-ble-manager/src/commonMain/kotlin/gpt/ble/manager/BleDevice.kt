@@ -29,6 +29,9 @@ data class BleDevice(
     val nameSource: DeviceNameSource? = null,
     /** At least one advertising/scan-response packet arrived during this scan. */
     val seenInCurrentScan: Boolean = false,
+    val serviceData: Map<BleUuid, BleBytes> = emptyMap(),
+    /** Host receipt time in Unix milliseconds; null for system-only records. */
+    val lastSeenMillis: Long? = null,
 ) {
     val displayName: String
         get() = name ?: address

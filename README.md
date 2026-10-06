@@ -11,23 +11,34 @@ remain responsible for accepting changes and releasing versions.
 
 The main code is licensed under **[MIT](LICENSE)**. The project is actively developed.
 
+This working tree contains **0.3.0 in development** (`0.3.0-local`). See the
+[0.3.0 API guide](docs/API_0.3.0.md) for local integration, migration notes, and
+examples of the new APIs. Maven dependency examples below refer to the 0.2.3 coordinates;
+they do not provide the new 0.3.0 functionality.
+
 ## Features
 
-- BLE scanning with name and service UUID filters.
+- BLE scanning with exact/prefix names, address, RSSI, UUID, manufacturer and service-data filters.
 - Merging advertised, system, and GATT device names.
 - Connections and discovery of services, characteristics, and descriptors.
 - Reads and writes, with or without a response.
-- Notifications, indications, and CCCD management.
+- Per-characteristic notification flows, indications, and shared CCCD ownership.
 - Pairing state, pair/unpair subject to OS capabilities.
 - State through `StateFlow`, notifications through `SharedFlow`.
-- Serialized GATT requests, timeouts, and resource cleanup.
+- Serialized GATT requests, independent queue/execution timeouts, and structured diagnostics.
+- Managed sessions with bounded reconnection, fresh discovery and automatic resubscription.
+- Service data, last-seen timestamps, scan events and optional disappearance detection.
+- Connection registry, lookup and disconnect-all.
+- Opt-in chunked transfers with progress, pacing and protocol framing.
+- Capability queries, Android RSSI/PHY/priority and Windows 11 connection preferences.
+- Separate Android background/companion integration and a hardware-free testing module.
 
 | Platform | Implementation | Notes |
 | --- | --- | --- |
 | Windows x64 | Kotlin/JVM, JNI, C++20/WinRT | DLL bundled in the JAR; Windows negotiates MTU |
 | Android API 26+ | Android Bluetooth API | The application requests runtime permissions |
 
-Peripheral/GATT server mode, automatic reconnection, iOS, Linux, and macOS are
+Peripheral/GATT server mode, iOS, Linux, and macOS are
 outside the current API's scope.
 
 ## Building from source
@@ -47,7 +58,7 @@ A complete Windows and Android build requires:
 From the repository root in PowerShell:
 
 ```powershell
-.\gradlew.bat :gpt-ble-manager:allTests :gpt-ble-manager:assemble
+.\gradlew.bat allTests assemble
 ```
 
 Gradle searches for CMake in `PATH`, its standard installation, and Visual Studio.
@@ -261,3 +272,5 @@ before sharing logs.
 The main source code and documentation are distributed under the [MIT License](LICENSE).
 Gradle Wrapper retains its Apache-2.0 license; see [NOTICE](NOTICE) and the
 [Wrapper license text](licenses/Apache-2.0.txt). Dependencies retain their own licenses.
+
+Windows console issues: [encoding and native error diagnostics](docs/WINDOWS_TROUBLESHOOTING.md).

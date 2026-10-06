@@ -22,11 +22,29 @@ using Clock = std::chrono::steady_clock;
  */
 void apartment();
 
+/** Locale-independent diagnostics; explicitly requests en-US and never falls back to system language.
+ * @see https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessagew
+ */
+std::wstring describeHresult(int32_t code);
+
 /**
- * The total budget for a regular GATT operation is 12 seconds. All steps of a composite operation
- * share the same deadline.
+ * All steps of a composite operation share the explicit JNI budget. Calls outside an
+ * OperationBudget scope retain a 12-second internal fallback.
  */
 Clock::time_point deadline();
+
+/** Explicit JNI operation budget, restored before the pooled worker thread is reused. */
+class OperationBudget
+{
+  public:
+    explicit OperationBudget(int64_t milliseconds);
+    ~OperationBudget();
+    OperationBudget(OperationBudget const&) = delete;
+    OperationBudget& operator=(OperationBudget const&) = delete;
+
+  private:
+    Clock::time_point previous;
+};
 
 /**
  * Bounded synchronous WinRT wait on a Kotlin Dispatchers.IO worker thread. Requests OS

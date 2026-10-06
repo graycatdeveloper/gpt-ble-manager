@@ -3,8 +3,11 @@ package gpt.ble.manager.internal.gatt
 import gpt.ble.manager.BleBytes
 import gpt.ble.manager.BleConnection
 import gpt.ble.manager.BleDevice
+import gpt.ble.manager.BleDiagnosticEvent
 import gpt.ble.manager.BleError
+import gpt.ble.manager.BleErrorDetails
 import gpt.ble.manager.BleException
+import gpt.ble.manager.BleManagerOptions
 import gpt.ble.manager.BleUuid
 import gpt.ble.manager.CharacteristicValue
 import gpt.ble.manager.ConnectionState
@@ -12,10 +15,16 @@ import gpt.ble.manager.DeviceNameSource
 import gpt.ble.manager.GattCharacteristic
 import gpt.ble.manager.GattDescriptor
 import gpt.ble.manager.GattService
+import gpt.ble.manager.OperationPhase
 import gpt.ble.manager.SubscriptionMode
+import gpt.ble.manager.TimeoutOverride
 import gpt.ble.manager.WriteMode
 import gpt.ble.manager.internal.names.decodeDeviceName
-import gpt.ble.manager.internal.scan.Advertisement
+import gpt.ble.manager.observation.NotificationObserver
+import kotlin.time.TimeSource
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -33,7 +42,7 @@ import kotlinx.coroutines.flow.update
 internal abstract class ManagedConnection(
     final override val id: String,
     device: BleDevice,
-    private val operationTimeoutMillis: Long = 15_000,
+    private val options: BleManagerOptions = BleManagerOptions(),
     private val onDeviceName: (String) -> Unit = {},
 ) : BleConnection {
     private val details = MutableStateFlow(device)
@@ -54,13 +63,88 @@ internal abstract class ManagedConnection(
     private val closed = MutableStateFlow(false)
     protected val operations = OperationQueue { terminate(it) }
 
-    protected suspend fun <T> operation(block: suspend () -> T): T =
-        operations.execute(operationTimeoutMillis) {
-            if (state.value != ConnectionState.Connected) {
-                throw BleException(BleError.Disconnected, "Connection is not active")
+    private val observer = NotificationObserver(this)
+
+    final override fun observe(
+        characteristic: GattCharacteristic,
+        mode: SubscriptionMode,
+    ): Flow<BleBytes> = observer.observe(characteristic, mode)
+
+    protected suspend fun executionTimeoutMillis(): Long =
+        (currentCoroutineContext()[TimeoutOverride]?.timeouts ?: options.timeouts).executionMillis
+
+    protected suspend fun <T> operation(
+        name: String = "gatt",
+        characteristic: GattCharacteristic? = null,
+        descriptor: GattDescriptor? = null,
+        block: suspend () -> T,
+    ): T {
+        val start = TimeSource.Monotonic.markNow()
+        val target =
+            characteristic
+                ?: services.value
+                    .flatMap { it.characteristics }
+                    .firstOrNull { it.id == descriptor?.characteristicId }
+        val details =
+            BleErrorDetails(
+                operation = name,
+                connectionId = id,
+                serviceUuid = services.value.firstOrNull { it.id == target?.serviceId }?.uuid,
+                characteristicUuid = target?.uuid,
+                descriptorUuid = descriptor?.uuid,
+            )
+        var phase = OperationPhase.Queued
+        fun report(next: OperationPhase, error: BleException? = null) {
+            runCatching {
+                options.diagnostics.record(
+                    BleDiagnosticEvent(details, next, start.elapsedNow().inWholeMilliseconds, error)
+                )
             }
-            block()
         }
+        report(phase)
+        val budgets = currentCoroutineContext()[TimeoutOverride]?.timeouts ?: options.timeouts
+        try {
+            return operations
+                .execute(budgets.executionMillis, budgets.queueWaitMillis) {
+                    phase = OperationPhase.Started
+                    report(phase)
+                    if (state.value != ConnectionState.Connected) {
+                        throw BleException(BleError.Disconnected, "Connection is not active")
+                    }
+                    block()
+                }
+                .also { report(OperationPhase.Succeeded) }
+        } catch (cancelled: CancellationException) {
+            report(OperationPhase.Cancelled)
+            throw cancelled
+        } catch (error: Exception) {
+            val ble =
+                if (error is BleException)
+                    BleException(
+                        error.code,
+                        error.message.orEmpty(),
+                        error,
+                        details.copy(
+                            platform = error.details.platform,
+                            platformStatus = error.details.platformStatus,
+                            phase = phase,
+                        ),
+                    )
+                else
+                    BleException(
+                        BleError.Rejected,
+                        error.message ?: "Operation failed",
+                        error,
+                        details.copy(phase = phase),
+                    )
+            report(OperationPhase.Failed, ble)
+            // Preserve argument-validation exceptions for existing API callers.
+            if (error is IllegalArgumentException) {
+                throw error
+            }
+            throw ble
+        }
+    }
 
     override suspend fun readDeviceName(): String? {
         val characteristic =

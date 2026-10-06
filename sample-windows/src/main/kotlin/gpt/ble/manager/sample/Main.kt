@@ -6,6 +6,10 @@ import kotlinx.coroutines.runBlocking
 
 /** Reads GATT metadata; --notify changes CCCD; explicit --pair/--unpair changes the OS bond. */
 fun main(args: Array<String>) = runBlocking {
+    if ("--console-check" in args) {
+        printConsoleEncoding()
+        return@runBlocking
+    }
     val target = args.firstOrNull { !it.startsWith("--") }
     require(!("--pair" in args && "--unpair" in args)) { "Choose either --pair or --unpair" }
     if (args.any { it in setOf("--pair", "--unpair", "--pairing-state") }) {
@@ -19,7 +23,11 @@ fun main(args: Array<String>) = runBlocking {
         }
         val device = findDevice(manager, target, args)
         inspectPairing(manager, device, args)
-        inspectGatt(manager, device, args)
+        if ("--managed" in args) {
+            inspectManagedSession(manager, device)
+        } else {
+            inspectGatt(manager, device, args)
+        }
     } finally {
         manager.close()
     }

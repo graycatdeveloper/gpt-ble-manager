@@ -56,7 +56,16 @@ internal fun pairResult(status: Int): PairResult {
             18 -> BleError.Rejected
             else -> BleError.NativeFailure
         }
-    throw BleException(code, "Windows pair failed: $reason (status=$status)")
+    throw BleException(
+        code,
+        "Windows pair failed: $reason (status=$status)",
+        details =
+            gpt.ble.manager.BleErrorDetails(
+                operation = "pair",
+                platform = "Windows",
+                platformStatus = status,
+            ),
+    )
 }
 
 /** WinRT DeviceUnpairingResultStatus; -1 means no matching DeviceInformation record. */

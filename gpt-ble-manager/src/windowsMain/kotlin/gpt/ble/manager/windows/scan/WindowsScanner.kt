@@ -9,11 +9,18 @@ import gpt.ble.manager.BleUuid
 import gpt.ble.manager.ScanOptions
 import gpt.ble.manager.ScanState
 import gpt.ble.manager.internal.scan.Advertisement
+import gpt.ble.manager.internal.scan.ScanEventPublisher
 import gpt.ble.manager.internal.scan.ScanStore
+import gpt.ble.manager.internal.scan.decodeServiceData
 import gpt.ble.manager.windows.NativeBridge
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /**
  * Owns the scan generation and merges advertising, system, and GATT names. Uses the same monitor as
@@ -32,16 +39,38 @@ internal class WindowsScanner(
     private val found = MutableStateFlow<List<BleDevice>>(emptyList())
     val scanState = scanning.asStateFlow()
     val devices = found.asStateFlow()
+    private val publisher = ScanEventPublisher()
+    val scanEvents = publisher.events
+    val droppedScanEvents = publisher.dropped
+    private var expiry: Job? = null
+
+    private fun startExpiry(options: ScanOptions, store: ScanStore) {
+        val ttl = options.lostTimeoutMillis ?: return
+        expiry =
+            CoroutineScope(Dispatchers.Default).launch {
+                while (true) {
+                    delay(minOf(ttl, 1_000))
+                    synchronized(lock) {
+                        if (!scanning.value.scanning) {
+                            return@launch
+                        }
+                        store.expire()
+                        found.value = store.devices.value
+                    }
+                }
+            }
+    }
 
     fun startScan(options: ScanOptions) {
         synchronized(lock) {
             stopScan()
             val manager = activeHandle()
-            scan = ScanStore(options)
+            scan = ScanStore(options, publisher::emit)
             found.value = emptyList()
             scanning.value = ScanState(scanning = true)
             try {
                 native.startScan(manager, ++generation)
+                startExpiry(options, scan!!)
             } catch (e: Exception) {
                 scan = null
                 val error = BleException(BleError.NativeFailure, "Unable to start Windows scan", e)
@@ -53,6 +82,8 @@ internal class WindowsScanner(
 
     fun stopScan() =
         synchronized(lock) {
+            expiry?.cancel()
+            expiry = null
             generation++
             try {
                 if (handle() != 0L) {
@@ -78,6 +109,7 @@ internal class WindowsScanner(
         completeName: Boolean,
         services: Array<String>,
         manufacturer: Array<ByteArray>,
+        serviceData: Array<ByteArray>,
     ) =
         synchronized(lock) {
             if (token != generation || handle() == 0L || !scanning.value.scanning) {
@@ -101,6 +133,7 @@ internal class WindowsScanner(
                         connectable,
                         services.map { BleUuid.parse(it) }.toSet(),
                         mfr,
+                        serviceData = decodeServiceData(serviceData),
                     ),
                     completeName,
                 )

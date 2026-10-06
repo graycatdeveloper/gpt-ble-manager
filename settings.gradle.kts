@@ -34,4 +34,6 @@ rootProject.name = "gpt-ble-manager"
 include(
     ":gpt-ble-manager",
     ":sample-windows",
+    ":gpt-ble-manager-testing",
+    ":gpt-ble-manager-android-background",
 )

@@ -1,4 +1,5 @@
 #include "scan/KnownDevices.hpp"
+#include "runtime/WinrtRuntime.hpp"
 #include "state/Manager.hpp"
 #include <utility>
 #include <winrt/Windows.Devices.Bluetooth.h>
@@ -103,7 +104,7 @@ void startNameWatcher(std::shared_ptr<Manager> const& owner, jlong generation)
             }
             catch (hresult_error const& e)
             {
-                nameLookupFailed(weak, generation, e.message().c_str());
+                nameLookupFailed(weak, generation, describeHresult(e.code().value));
             }
         }
     );
@@ -127,7 +128,7 @@ void startNameWatcher(std::shared_ptr<Manager> const& owner, jlong generation)
             }
             catch (hresult_error const& e)
             {
-                nameLookupFailed(weak, generation, e.message().c_str());
+                nameLookupFailed(weak, generation, describeHresult(e.code().value));
             }
         }
     );

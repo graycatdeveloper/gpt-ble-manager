@@ -32,6 +32,8 @@ struct Connection
     std::weak_ptr<Manager> manager;
     winrt::Windows::Devices::Bluetooth::BluetoothLEDevice device{nullptr};
     winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattSession session{nullptr};
+    winrt::Windows::Devices::Bluetooth::BluetoothLEPreferredConnectionParametersRequest
+        preferredParameters{nullptr};
     // Protects the catalog and winrt::event_token; WinRT waits run outside this mutex.
     std::mutex mutex;
     std::atomic<bool> closed{false};

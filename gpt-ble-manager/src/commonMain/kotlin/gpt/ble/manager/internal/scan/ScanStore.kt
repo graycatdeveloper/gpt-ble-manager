@@ -2,9 +2,12 @@ package gpt.ble.manager.internal.scan
 
 import gpt.ble.manager.AddressType
 import gpt.ble.manager.BleDevice
+import gpt.ble.manager.ScanEvent
 import gpt.ble.manager.ScanOptions
 import gpt.ble.manager.internal.canonicalAddress
 import gpt.ble.manager.internal.names.usableSystemName
+import kotlin.time.Clock
+import kotlin.time.TimeSource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -14,14 +17,30 @@ import kotlinx.coroutines.flow.asStateFlow
  * mutex here. LinkedHashMap preserves discovery order, and StateFlow publishes a new immutable
  * list.
  */
-internal class ScanStore(private val options: ScanOptions) {
+internal class ScanStore(
+    private val options: ScanOptions,
+    private val emit: (ScanEvent) -> Unit = {},
+    private val epochMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    private val elapsedMillis: () -> Long = run {
+        val origin = TimeSource.Monotonic.markNow()
+        val clock: () -> Long = { origin.elapsedNow().inWholeMilliseconds }
+        clock
+    },
+) {
+    private val lastSeen = mutableMapOf<String, Long>()
     private val entries = linkedMapOf<String, ScanEntry>()
     private val results = MutableStateFlow<List<BleDevice>>(emptyList())
     val devices = results.asStateFlow()
 
     // Platform owners serialize all calls. Only actual advertisements mark a device as seen.
     fun accept(packet: Advertisement) {
-        val incoming = packet.device.copy(address = canonicalAddress(packet.device.address))
+        val incoming =
+            packet.device.copy(
+                address = canonicalAddress(packet.device.address),
+                lastSeenMillis = epochMillis(),
+                seenInCurrentScan = true,
+            )
+        lastSeen[incoming.address] = elapsedMillis()
         val old = entries[incoming.address] ?: ScanEntry(BleDevice(incoming.address))
         val useName = !incoming.name.isNullOrBlank() && (packet.completeName || !old.completeName)
         entries[incoming.address] =
@@ -40,6 +59,7 @@ internal class ScanStore(private val options: ScanOptions) {
                             },
                         serviceUuids = old.device.serviceUuids + incoming.serviceUuids,
                         manufacturerData = old.device.manufacturerData + incoming.manufacturerData,
+                        serviceData = old.device.serviceData + incoming.serviceData,
                         seenInCurrentScan = true,
                     ),
                 advertisedName =
@@ -55,6 +75,21 @@ internal class ScanStore(private val options: ScanOptions) {
                         old.completeName
                     },
             )
+        publish()
+        if (options.matches(entries.getValue(incoming.address).resolved())) {
+            emit(ScanEvent.Packet(incoming, incoming.lastSeenMillis!!))
+        }
+    }
+
+    /** Called by the platform timer under the same monitor as advertising callbacks. */
+    fun expire() {
+        val ttl = options.lostTimeoutMillis ?: return
+        val now = elapsedMillis()
+        val expired = lastSeen.filterValues { now - it >= ttl }.keys
+        expired.forEach {
+            entries.remove(it)
+            lastSeen.remove(it)
+        }
         publish()
     }
 
@@ -84,15 +119,17 @@ internal class ScanStore(private val options: ScanOptions) {
     }
 
     private fun publish() {
-        results.value =
-            entries.values
-                .map { it.resolved() }
-                .filter { device ->
-                    (device.seenInCurrentScan || options.includeKnownDevices) &&
-                        (options.serviceUuids.isEmpty() ||
-                            device.serviceUuids.any { it in options.serviceUuids }) &&
-                        (options.namePrefix == null ||
-                            device.name?.startsWith(options.namePrefix) == true)
-                }
+        val old = results.value.associateBy { it.address }
+        val next = entries.values.map { it.resolved() }.filter(options::matches)
+        val present = next.map { it.address }.toSet()
+        old.values.filter { it.address !in present }.forEach { emit(ScanEvent.Disappeared(it)) }
+        next.forEach { device ->
+            when (old[device.address]) {
+                null -> emit(ScanEvent.Appeared(device))
+                device -> Unit
+                else -> emit(ScanEvent.Updated(device))
+            }
+        }
+        results.value = next
     }
 }

@@ -22,6 +22,27 @@ import kotlinx.coroutines.test.runTest
 
 class OperationQueueTest {
     @Test
+    fun queuedTimeoutDoesNotCancelTransportOrPoisonQueue() = runTest {
+        var aborted = false
+        val queue = OperationQueue { aborted = true }
+        val first = async {
+            queue.execute(1000) {
+                delay(200)
+                42
+            }
+        }
+        runCurrent()
+        val error =
+            assertFailsWith<BleException> {
+                queue.execute(1000, queueWaitMillis = 10) { fail("Must not enter transport") }
+            }
+        assertEquals(BleError.Timeout, error.code)
+        assertFalse(aborted)
+        assertEquals(42, first.await())
+        assertEquals(7, queue.execute(1000) { 7 })
+    }
+
+    @Test
     fun requestsRunOneAtATime() = runTest {
         val queue = OperationQueue { error("Unexpected abort") }
         val events = mutableListOf<String>()

@@ -1,16 +1,19 @@
 package gpt.ble.manager.windows
 
 import gpt.ble.manager.AdapterState
+import gpt.ble.manager.BleCapabilities
 import gpt.ble.manager.BleConnection
 import gpt.ble.manager.BleDevice
 import gpt.ble.manager.BleError
 import gpt.ble.manager.BleException
 import gpt.ble.manager.BleManager
+import gpt.ble.manager.BleManagerOptions
 import gpt.ble.manager.PairResult
 import gpt.ble.manager.PairingState
 import gpt.ble.manager.ScanOptions
 import gpt.ble.manager.UnpairResult
 import gpt.ble.manager.internal.canonicalAddress
+import gpt.ble.manager.internal.diagnose
 import gpt.ble.manager.windows.gatt.WindowsConnection
 import gpt.ble.manager.windows.pairing.WindowsPairingController
 import gpt.ble.manager.windows.scan.WindowsScanner
@@ -24,10 +27,10 @@ import kotlinx.coroutines.withContext
 
 /**
  * Public Windows entry point. The scanner and pairing controller share the manager's monitor, while
- * connections own their GATT resources. close stops work and closes sessions; a power state change
- * terminates active connections with an explicit reason.
+ * sessions own their GATT resources. close stops work and closes sessions; a power state change
+ * terminates active sessions with an explicit reason.
  */
-class WindowsBleManager : BleManager {
+class WindowsBleManager(private val options: BleManagerOptions = BleManagerOptions()) : BleManager {
     private val lock = Any()
     private val native = NativeBridge(this)
     @Volatile private var handle = native.create()
@@ -39,7 +42,19 @@ class WindowsBleManager : BleManager {
     override val devices
         get() = scanner.devices
 
-    private val connections = ConcurrentHashMap<Long, WindowsConnection>()
+    private val activeConnections = MutableStateFlow<List<BleConnection>>(emptyList())
+    override val connections = activeConnections.asStateFlow()
+    override val scanEvents
+        get() = scanner.scanEvents
+
+    override val droppedScanEvents
+        get() = scanner.droppedScanEvents
+
+    private val sessions = ConcurrentHashMap<Long, WindowsConnection>()
+    override val capabilities: BleCapabilities
+        get() =
+            BleCapabilities(preferredConnectionParameters = native.supportsPreferredParameters())
+
     private val addresses = ConcurrentHashMap.newKeySet<String>()
 
     private val scanner = WindowsScanner(lock, native, { handle }, ::activeHandle)
@@ -73,13 +88,13 @@ class WindowsBleManager : BleManager {
             }
 
     override suspend fun getPairingState(device: BleDevice): PairingState =
-        pairing.getPairingState(device)
+        diagnose(options, "pairingState", "Windows") { pairing.getPairingState(device) }
 
     override suspend fun pair(device: BleDevice, timeoutMillis: Long): PairResult =
-        pairing.pair(device, timeoutMillis)
+        diagnose(options, "pair", "Windows") { pairing.pair(device, timeoutMillis) }
 
     override suspend fun unpair(device: BleDevice, timeoutMillis: Long): UnpairResult =
-        pairing.unpair(device, timeoutMillis)
+        diagnose(options, "unpair", "Windows") { pairing.unpair(device, timeoutMillis) }
 
     override suspend fun startScan(options: ScanOptions) {
         val state = refreshAdapterState()
@@ -91,7 +106,10 @@ class WindowsBleManager : BleManager {
 
     override fun stopScan() = scanner.stopScan()
 
-    override suspend fun connect(device: BleDevice, timeoutMillis: Long): BleConnection {
+    override suspend fun connect(device: BleDevice, timeoutMillis: Long): BleConnection =
+        diagnose(options, "connect", "Windows") { connectSession(device, timeoutMillis) }
+
+    private suspend fun connectSession(device: BleDevice, timeoutMillis: Long): BleConnection {
         require(timeoutMillis in 1..120_000)
         val address = canonicalAddress(device.address)
         val manager = activeHandle()
@@ -113,11 +131,19 @@ class WindowsBleManager : BleManager {
                     session,
                     device.copy(address = address),
                     onDeviceName = { name -> updateGattName(address, name) },
+                    options = options,
+                    capabilities = capabilities,
                 ) {
-                    connections.remove(session)
-                    addresses.remove(address)
+                    synchronized(lock) {
+                        sessions.remove(session)
+                        addresses.remove(address)
+                        activeConnections.value = sessions.values.toList()
+                    }
                 }
-            connections[session] = connection
+            synchronized(lock) {
+                sessions[session] = connection
+                activeConnections.value = sessions.values.toList()
+            }
             if (handle == 0L || !native.monitor(manager, session)) {
                 throw BleException(
                     BleError.Disconnected,
@@ -149,7 +175,7 @@ class WindowsBleManager : BleManager {
                 stopScan()
                 handle.also { handle = 0L }
             }
-        connections.values.toList().forEach { it.close() }
+        sessions.values.toList().forEach { it.close() }
         native.destroy(previous)
         adapters.value = AdapterState.Closed
     }
@@ -164,6 +190,7 @@ class WindowsBleManager : BleManager {
         completeName: Boolean,
         services: Array<String>,
         manufacturer: Array<ByteArray>,
+        serviceData: Array<ByteArray>,
     ) =
         scanner.advertisement(
             token,
@@ -175,6 +202,7 @@ class WindowsBleManager : BleManager {
             completeName,
             services,
             manufacturer,
+            serviceData,
         )
 
     internal fun scanStopped(token: Long, error: String?) = scanner.scanStopped(token, error)
@@ -189,15 +217,15 @@ class WindowsBleManager : BleManager {
         scanner.updateGattName(address, name)
 
     internal fun disconnected(session: Long, error: String) {
-        connections[session]?.terminate(BleException(BleError.Disconnected, error))
+        sessions[session]?.terminate(BleException(BleError.Disconnected, error))
     }
 
     internal fun notification(session: Long, attribute: Int, value: ByteArray) {
-        connections[session]?.notification(attribute, value)
+        sessions[session]?.notification(attribute, value)
     }
 
     internal fun mtuChanged(session: Long, mtu: Int) {
-        connections[session]?.mtuChanged(mtu)
+        sessions[session]?.mtuChanged(mtu)
     }
 
     internal fun adapterChanged(state: Int) {
@@ -212,7 +240,7 @@ class WindowsBleManager : BleManager {
             }
         if (state != 0) {
             stopScan()
-            connections.values.toList().forEach {
+            sessions.values.toList().forEach {
                 it.terminate(BleException(BleError.NotReady, "Bluetooth adapter was turned off"))
             }
         }

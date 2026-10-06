@@ -10,11 +10,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import gpt.ble.manager.AdapterState
+import gpt.ble.manager.BleCapabilities
 import gpt.ble.manager.BleConnection
 import gpt.ble.manager.BleDevice
 import gpt.ble.manager.BleError
 import gpt.ble.manager.BleException
 import gpt.ble.manager.BleManager
+import gpt.ble.manager.BleManagerOptions
 import gpt.ble.manager.PairResult
 import gpt.ble.manager.PairingState
 import gpt.ble.manager.ScanOptions
@@ -24,6 +26,7 @@ import gpt.ble.manager.android.gatt.AndroidConnection
 import gpt.ble.manager.android.pairing.AndroidPairingController
 import gpt.ble.manager.android.scan.AndroidScanner
 import gpt.ble.manager.internal.canonicalAddress
+import gpt.ble.manager.internal.diagnose
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,10 +34,13 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Public Android entry point. The scanner and pairing controller share the manager's monitor, while
- * connections own their GATT resources. close stops work and closes sessions; a power state change
- * terminates active connections with an explicit reason.
+ * sessions own their GATT resources. close stops work and closes sessions; a power state change
+ * terminates active sessions with an explicit reason.
  */
-class AndroidBleManager(context: Context) : BleManager {
+class AndroidBleManager(
+    context: Context,
+    private val options: BleManagerOptions = BleManagerOptions(),
+) : BleManager {
     private val context = context.applicationContext
     private val adapter =
         (this.context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
@@ -48,7 +54,28 @@ class AndroidBleManager(context: Context) : BleManager {
 
     private val lock = Any()
     private val closed = AtomicBoolean(false)
-    private val connections = ConcurrentHashMap<String, AndroidConnection>()
+    private val activeConnections = MutableStateFlow<List<BleConnection>>(emptyList())
+    override val connections = activeConnections.asStateFlow()
+    override val scanEvents
+        get() = scanController.scanEvents
+
+    override val droppedScanEvents
+        get() = scanController.droppedScanEvents
+
+    private val sessions = ConcurrentHashMap<String, AndroidConnection>()
+    override val capabilities: BleCapabilities
+        get() =
+            BleCapabilities(
+                readRemoteRssi = true,
+                readPhy = true,
+                phy2M = runCatching { adapter?.isLe2MPhySupported == true }.getOrDefault(false),
+                phyCoded =
+                    runCatching { adapter?.isLeCodedPhySupported == true }.getOrDefault(false),
+                connectionPriority = true,
+                backgroundScan = true,
+                companionAssociation = true,
+            )
+
     private val adapterStateReader = AndroidAdapterState(this.context, adapter, closed)
     private val scanController =
         AndroidScanner(
@@ -60,7 +87,7 @@ class AndroidBleManager(context: Context) : BleManager {
             ::currentState,
             ::checkReady,
         )
-    private val pairing = AndroidPairingController(this.context, adapter, closed, lock, connections)
+    private val pairing = AndroidPairingController(this.context, adapter, closed, lock, sessions)
 
     private val receiver =
         object : BroadcastReceiver() {
@@ -68,7 +95,7 @@ class AndroidBleManager(context: Context) : BleManager {
                 adapterStatus.value = currentState()
                 if (adapterStatus.value != AdapterState.Ready) {
                     stopScan()
-                    connections.values.toList().forEach {
+                    sessions.values.toList().forEach {
                         it.terminate(
                             BleException(BleError.NotReady, "Bluetooth adapter is unavailable")
                         )
@@ -96,19 +123,22 @@ class AndroidBleManager(context: Context) : BleManager {
         currentState().also { adapterStatus.value = it }
 
     override suspend fun getPairingState(device: BleDevice): PairingState =
-        pairing.getPairingState(device)
+        diagnose(options, "pairingState", "Android") { pairing.getPairingState(device) }
 
     override suspend fun pair(device: BleDevice, timeoutMillis: Long): PairResult =
-        pairing.pair(device, timeoutMillis)
+        diagnose(options, "pair", "Android") { pairing.pair(device, timeoutMillis) }
 
     override suspend fun unpair(device: BleDevice, timeoutMillis: Long): UnpairResult =
-        pairing.unpair(device, timeoutMillis)
+        diagnose(options, "unpair", "Android") { pairing.unpair(device, timeoutMillis) }
 
     override suspend fun startScan(options: ScanOptions) = scanController.startScan(options)
 
     override fun stopScan() = scanController.stopScan()
 
-    override suspend fun connect(device: BleDevice, timeoutMillis: Long): BleConnection {
+    override suspend fun connect(device: BleDevice, timeoutMillis: Long): BleConnection =
+        diagnose(options, "connect", "Android") { connectSession(device, timeoutMillis) }
+
+    private suspend fun connectSession(device: BleDevice, timeoutMillis: Long): BleConnection {
         checkReady()
         require(timeoutMillis > 0)
         val address = canonicalAddress(device.address)
@@ -118,16 +148,19 @@ class AndroidBleManager(context: Context) : BleManager {
                 adapter!!.getRemoteDevice(address),
                 device.copy(address = address),
                 onDeviceName = { name -> scanController.updateGattName(address, name) },
+                options = options,
+                capabilities = capabilities,
             ) {
-                connections.remove(address, it)
+                synchronized(lock) {
+                    sessions.remove(address, it)
+                    activeConnections.value = sessions.values.toList()
+                }
             }
         synchronized(lock) {
             if (closed.get()) {
                 throw BleException(BleError.Closed, "Manager is closed")
             }
-            if (
-                pairing.hasPending(address) || connections.putIfAbsent(address, connection) != null
-            ) {
+            if (pairing.hasPending(address) || sessions.putIfAbsent(address, connection) != null) {
                 throw BleException(
                     BleError.Rejected,
                     "A connection or pairing operation for $address already exists",
@@ -138,6 +171,7 @@ class AndroidBleManager(context: Context) : BleManager {
             if (closed.get()) {
                 throw BleException(BleError.Closed, "Manager is closed")
             }
+            synchronized(lock) { activeConnections.value = sessions.values.toList() }
             connection.open(timeoutMillis)
             return connection
         } catch (e: Throwable) {
@@ -154,7 +188,7 @@ class AndroidBleManager(context: Context) : BleManager {
             pairing.stopPending()
         }
         stopScan()
-        connections.values.toList().forEach { it.close() }
+        sessions.values.toList().forEach { it.close() }
         context.unregisterReceiver(receiver)
         adapterStatus.value = AdapterState.Closed
     }

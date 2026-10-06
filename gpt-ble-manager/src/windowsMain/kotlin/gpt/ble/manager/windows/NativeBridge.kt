@@ -15,6 +15,10 @@ internal class NativeBridge(private val owner: WindowsBleManager) {
         NativeLibrary.load()
     }
 
+    external fun supportsPreferredParameters(): Boolean
+
+    external fun preferredParameters(manager: Long, connection: Long, mode: Int): Int
+
     external fun create(): Long
 
     external fun destroy(manager: Long)
@@ -42,15 +46,16 @@ internal class NativeBridge(private val owner: WindowsBleManager) {
 
     external fun disconnect(manager: Long, connection: Long)
 
-    external fun discover(manager: Long, connection: Long): Array<String>
+    external fun discover(manager: Long, connection: Long, timeoutMillis: Long): Array<String>
 
-    external fun readDeviceName(manager: Long, connection: Long): ByteArray?
+    external fun readDeviceName(manager: Long, connection: Long, timeoutMillis: Long): ByteArray?
 
     external fun read(
         manager: Long,
         connection: Long,
         attribute: Int,
         descriptor: Boolean,
+        timeoutMillis: Long,
     ): ByteArray
 
     external fun write(
@@ -60,9 +65,16 @@ internal class NativeBridge(private val owner: WindowsBleManager) {
         descriptor: Boolean,
         value: ByteArray,
         withResponse: Boolean,
+        timeoutMillis: Long,
     )
 
-    external fun subscribe(manager: Long, connection: Long, attribute: Int, mode: Int)
+    external fun subscribe(
+        manager: Long,
+        connection: Long,
+        attribute: Int,
+        mode: Int,
+        timeoutMillis: Long,
+    )
 
     external fun mtu(manager: Long, connection: Long): Int
 
@@ -77,6 +89,7 @@ internal class NativeBridge(private val owner: WindowsBleManager) {
         completeName: Boolean,
         services: Array<String>,
         manufacturer: Array<ByteArray>,
+        serviceData: Array<ByteArray>,
     ) =
         owner.advertisement(
             generation,
@@ -88,6 +101,7 @@ internal class NativeBridge(private val owner: WindowsBleManager) {
             completeName,
             services,
             manufacturer,
+            serviceData,
         )
 
     @Suppress("unused")

@@ -13,13 +13,20 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import gpt.ble.manager.BleBytes
+import gpt.ble.manager.BleCapabilities
 import gpt.ble.manager.BleDevice
 import gpt.ble.manager.BleError
+import gpt.ble.manager.BleErrorDetails
 import gpt.ble.manager.BleException
+import gpt.ble.manager.BleManagerOptions
+import gpt.ble.manager.BlePhy
 import gpt.ble.manager.BleUuid
+import gpt.ble.manager.ConnectionPriority
 import gpt.ble.manager.GattCharacteristic
 import gpt.ble.manager.GattDescriptor
 import gpt.ble.manager.GattService
+import gpt.ble.manager.PhyCoding
+import gpt.ble.manager.PhyState
 import gpt.ble.manager.SubscriptionMode
 import gpt.ble.manager.WriteMode
 import gpt.ble.manager.internal.gatt.ManagedConnection
@@ -36,8 +43,16 @@ internal class AndroidConnection(
     private val remote: BluetoothDevice,
     device: BleDevice,
     onDeviceName: (String) -> Unit,
+    options: BleManagerOptions,
+    override val capabilities: BleCapabilities,
     private val removed: (AndroidConnection) -> Unit,
-) : ManagedConnection(UUID.randomUUID().toString(), device, onDeviceName = onDeviceName) {
+) :
+    ManagedConnection(
+        UUID.randomUUID().toString(),
+        device,
+        onDeviceName = onDeviceName,
+        options = options,
+    ) {
     private val lock = Any()
     private var gatt: BluetoothGatt? = null
     private var released = false
@@ -130,7 +145,16 @@ internal class AndroidConnection(
                 request.result.complete(value.copyOf())
             } else {
                 request.result.completeExceptionally(
-                    BleException(BleError.Protocol, "$kind failed with GATT status $status")
+                    BleException(
+                        BleError.Protocol,
+                        "$kind failed with GATT status $status",
+                        details =
+                            BleErrorDetails(
+                                operation = kind,
+                                platform = "Android",
+                                platformStatus = status,
+                            ),
+                    )
                 )
             }
         }
@@ -155,6 +179,12 @@ internal class AndroidConnection(
                     BleException(
                         BleError.Disconnected,
                         "Android connection ended: status=$status state=$newState",
+                        details =
+                            BleErrorDetails(
+                                operation = "connect",
+                                platform = "Android",
+                                platformStatus = status,
+                            ),
                     )
                 connected.completeExceptionally(error)
                 terminate(error)
@@ -199,26 +229,29 @@ internal class AndroidConnection(
             catalog.characteristicId(characteristic)?.let { emitValue(it, value) }
         }
 
-    override suspend fun discoverServices(): List<GattService> = operation {
-        // Keep a stable catalog for this connection; service-changed invalidates the session.
-        if (services.value.isNotEmpty()) {
-            return@operation services.value
+    override suspend fun discoverServices(): List<GattService> =
+        operation("discoverServices") {
+            // Keep a stable catalog for this connection; service-changed invalidates the session.
+            if (services.value.isNotEmpty()) {
+                return@operation services.value
+            }
+            request("discover") { it.discoverServices() }
+            synchronized(lock) {
+                val active =
+                    gatt ?: throw BleException(BleError.Disconnected, "GATT handle is closed")
+                catalog.build(active.services).also { mutableServices.value = it }
+            }
         }
-        request("discover") { it.discoverServices() }
-        synchronized(lock) {
-            val active = gatt ?: throw BleException(BleError.Disconnected, "GATT handle is closed")
-            catalog.build(active.services).also { mutableServices.value = it }
-        }
-    }
 
-    override suspend fun read(characteristic: GattCharacteristic): BleBytes = operation {
-        checkCharacteristic(characteristic)
-        require(characteristic.canRead) { "Read is not supported" }
-        val native = synchronized(lock) { catalog.characteristic(characteristic.id) }
-        val value = request("read", native) { it.readCharacteristic(native) }
-        recordDeviceName(characteristic, value)
-        BleBytes(value)
-    }
+    override suspend fun read(characteristic: GattCharacteristic): BleBytes =
+        operation("read", characteristic) {
+            checkCharacteristic(characteristic)
+            require(characteristic.canRead) { "Read is not supported" }
+            val native = synchronized(lock) { catalog.characteristic(characteristic.id) }
+            val value = request("read", native) { it.readCharacteristic(native) }
+            recordDeviceName(characteristic, value)
+            BleBytes(value)
+        }
 
     override suspend fun write(
         characteristic: GattCharacteristic,
@@ -226,7 +259,7 @@ internal class AndroidConnection(
         mode: WriteMode,
     ) {
         val bytes = value.copyOf()
-        operation {
+        operation("write", characteristic) {
             checkWrite(characteristic, bytes, mode)
             val native = synchronized(lock) { catalog.characteristic(characteristic.id) }
             val type =
@@ -237,7 +270,7 @@ internal class AndroidConnection(
                 }
             request("write", native) { active ->
                 if (Build.VERSION.SDK_INT >= 33) {
-                    active.writeCharacteristic(native, bytes, type) == BluetoothStatusCodes.SUCCESS
+                    accepted(active.writeCharacteristic(native, bytes, type), "write")
                 } else {
                     native.writeType = type
                     native.value = bytes
@@ -247,21 +280,38 @@ internal class AndroidConnection(
         }
     }
 
-    override suspend fun readDescriptor(descriptor: GattDescriptor): BleBytes = operation {
-        checkDescriptor(descriptor)
-        val native = synchronized(lock) { catalog.descriptor(descriptor.id) }
-        BleBytes(request("readDescriptor", native) { it.readDescriptor(native) })
-    }
+    override suspend fun readDescriptor(descriptor: GattDescriptor): BleBytes =
+        operation("readDescriptor", descriptor = descriptor) {
+            checkDescriptor(descriptor)
+            val native = synchronized(lock) { catalog.descriptor(descriptor.id) }
+            BleBytes(request("readDescriptor", native) { it.readDescriptor(native) })
+        }
 
     override suspend fun writeDescriptor(descriptor: GattDescriptor, value: ByteArray) {
         val bytes = value.copyOf()
         require(descriptor.uuid != BleUuid.parse("2902")) { "Use subscribe() to configure CCCD" }
-        operation {
+        operation("writeDescriptor", descriptor = descriptor) {
             checkDescriptor(descriptor)
             require(bytes.size <= mtu.value - 3) { "Payload exceeds MTU - 3" }
             val native = synchronized(lock) { catalog.descriptor(descriptor.id) }
             writeNativeDescriptor(native, bytes)
         }
+    }
+
+    private fun accepted(status: Int, name: String): Boolean {
+        if (status != BluetoothStatusCodes.SUCCESS) {
+            throw BleException(
+                BleError.Rejected,
+                "Android rejected $name: status=$status",
+                details =
+                    BleErrorDetails(
+                        operation = name,
+                        platform = "Android",
+                        platformStatus = status,
+                    ),
+            )
+        }
+        return true
     }
 
     private suspend fun writeNativeDescriptor(
@@ -270,7 +320,7 @@ internal class AndroidConnection(
     ) {
         request("writeDescriptor", descriptor) { active ->
             if (Build.VERSION.SDK_INT >= 33) {
-                active.writeDescriptor(descriptor, bytes) == BluetoothStatusCodes.SUCCESS
+                accepted(active.writeDescriptor(descriptor, bytes), "writeDescriptor")
             } else {
                 descriptor.value = bytes
                 active.writeDescriptor(descriptor)
@@ -279,7 +329,7 @@ internal class AndroidConnection(
     }
 
     override suspend fun subscribe(characteristic: GattCharacteristic, mode: SubscriptionMode) =
-        operation {
+        operation("subscribe", characteristic) {
             checkSubscription(characteristic, mode)
             val native = synchronized(lock) { catalog.characteristic(characteristic.id) }
             val cccd =
@@ -308,11 +358,85 @@ internal class AndroidConnection(
             }
         }
 
-    override suspend fun requestMtu(size: Int): Int = operation {
-        require(size in 23..517)
-        request("mtu") { it.requestMtu(size) }
-        mtu.value
+    override suspend fun requestMtu(size: Int): Int =
+        operation("requestMtu") {
+            require(size in 23..517)
+            request("mtu") { it.requestMtu(size) }
+            mtu.value
+        }
+
+    /** Android invokes onReadRemoteRssi; this request participates in the normal GATT queue. */
+    override suspend fun readRssi(): Int =
+        operation("readRssi") {
+            request("rssi") { it.readRemoteRssi() }.single().toInt()
+        }
+
+    private fun decodePhy(value: ByteArray): PhyState {
+        fun decode(byte: Byte): BlePhy =
+            when (byte.toInt()) {
+                BluetoothDevice.PHY_LE_1M -> BlePhy.Le1M
+                BluetoothDevice.PHY_LE_2M -> BlePhy.Le2M
+                BluetoothDevice.PHY_LE_CODED -> BlePhy.LeCoded
+                else -> throw BleException(BleError.Protocol, "Unknown PHY: $byte")
+            }
+        return PhyState(decode(value[0]), decode(value[1]))
     }
+
+    override suspend fun readPhy(): PhyState =
+        operation("readPhy") {
+            decodePhy(
+                request("readPhy") {
+                    it.readPhy()
+                    true
+                }
+            )
+        }
+
+    override suspend fun setPreferredPhy(
+        transmit: Set<BlePhy>,
+        receive: Set<BlePhy>,
+        coding: PhyCoding,
+    ): PhyState =
+        operation("setPreferredPhy") {
+            require(transmit.isNotEmpty() && receive.isNotEmpty())
+            if (
+                BlePhy.Le2M in transmit + receive && !capabilities.phy2M ||
+                    BlePhy.LeCoded in transmit + receive && !capabilities.phyCoded
+            ) {
+                throw BleException(
+                    BleError.Unsupported,
+                    "Requested PHY is not supported by this adapter",
+                )
+            }
+            fun mask(phys: Set<BlePhy>): Int =
+                phys.fold(0) { result, phy -> result or (1 shl phy.ordinal) }
+            decodePhy(
+                request("setPhy") {
+                    it.setPreferredPhy(mask(transmit), mask(receive), coding.ordinal)
+                    true
+                }
+            )
+        }
+
+    override suspend fun requestConnectionPriority(priority: ConnectionPriority): Unit =
+        operation("connectionPriority") {
+            // Android provides a synchronous acceptance result, not completion of negotiation.
+            synchronized(lock) {
+                val active = gatt ?: throw BleException(BleError.Disconnected, "Connection ended")
+                val accepted =
+                    active.requestConnectionPriority(
+                        when (priority) {
+                            ConnectionPriority.Balanced ->
+                                BluetoothGatt.CONNECTION_PRIORITY_BALANCED
+                            ConnectionPriority.High -> BluetoothGatt.CONNECTION_PRIORITY_HIGH
+                            ConnectionPriority.LowPower ->
+                                BluetoothGatt.CONNECTION_PRIORITY_LOW_POWER
+                        }
+                    )
+                if (!accepted)
+                    throw BleException(BleError.Rejected, "Android rejected connection priority")
+            }
+        }
 
     override fun releasePlatform() {
         synchronized(lock) {

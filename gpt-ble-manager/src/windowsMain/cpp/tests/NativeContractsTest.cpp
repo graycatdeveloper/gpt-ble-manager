@@ -114,6 +114,22 @@ void explicitUuidsAndRepeatedServiceDataKeepTheirOrder()
     );
 }
 
+void systemMessagesUseEnglishAndRetainCode()
+{
+    const auto denied = describeHresult(static_cast<int32_t>(0x80070005));
+    require(denied.find(L"HRESULT 0x80070005:") == 0, "HRESULT prefix lost");
+    require(
+        denied.find(L"Access is denied") != std::wstring::npos,
+        "System message is not English"
+    );
+    const auto unknown = describeHresult(static_cast<int32_t>(0x81234567));
+    require(unknown.find(L"HRESULT 0x81234567:") == 0, "Unknown HRESULT prefix lost");
+    require(
+        unknown.find(L"no English system description") != std::wstring::npos,
+        "Unknown HRESULT fallback changed"
+    );
+}
+
 void gattErrorsKeepStatusAndContext()
 {
     success(GattCommunicationStatus::Success);
@@ -131,6 +147,32 @@ void gattErrorsKeepStatusAndContext()
         );
     }
 }
+
+void operationBudgetsAreNestedAndRestored()
+{
+    const auto before = deadline();
+    {
+        OperationBudget outer(1000);
+        const auto outerDeadline = deadline();
+        require(outerDeadline < before, "Explicit deadline not applied");
+        {
+            OperationBudget inner(10);
+            require(deadline() < outerDeadline, "Nested deadline not applied");
+        }
+        require(deadline() == outerDeadline, "Nested deadline was not restored");
+    }
+    require(deadline() >= before, "Budget leaked into pooled thread");
+    bool rejected = false;
+    try
+    {
+        OperationBudget invalid(0);
+    }
+    catch (std::invalid_argument const&)
+    {
+        rejected = true;
+    }
+    require(rejected, "Invalid operation budget was accepted");
+}
 } // namespace
 
 int main()
@@ -144,7 +186,9 @@ int main()
         malformedAndUnrelatedSectionsAreIgnored();
         explicitUuidsAndRepeatedServiceDataKeepTheirOrder();
         gattErrorsKeepStatusAndContext();
-        std::cout << "6 native contract checks passed\n";
+        systemMessagesUseEnglishAndRetainCode();
+        operationBudgetsAreNestedAndRestored();
+        std::cout << "8 native contract checks passed\n";
         return 0;
     }
     catch (winrt::hresult_error const& error)

@@ -1,6 +1,7 @@
 #include "adapter/Adapter.hpp"
 #include "gatt/AttributeOperations.hpp"
 #include "gatt/ConnectionOperations.hpp"
+#include "gatt/ConnectionPreferences.hpp"
 #include "gatt/Discovery.hpp"
 #include "gatt/Subscriptions.hpp"
 #include "jni/JniRuntime.hpp"
@@ -211,12 +212,14 @@ JNIEXPORT jbyteArray JNICALL Java_gpt_ble_manager_windows_NativeBridge_readDevic
     JNIEnv* env,
     jobject,
     jlong handle,
-    jlong id
+    jlong id,
+    jlong timeout
 )
 {
     try
     {
         gpt::ble::manager::windows::apartment();
+        gpt::ble::manager::windows::OperationBudget budget(timeout);
         return gpt::ble::manager::windows::readGattDeviceName(env, handle, id);
     }
     catch (...)
@@ -226,12 +229,18 @@ JNIEXPORT jbyteArray JNICALL Java_gpt_ble_manager_windows_NativeBridge_readDevic
     }
 }
 
-JNIEXPORT jobjectArray JNICALL
-Java_gpt_ble_manager_windows_NativeBridge_discover(JNIEnv* env, jobject, jlong handle, jlong id)
+JNIEXPORT jobjectArray JNICALL Java_gpt_ble_manager_windows_NativeBridge_discover(
+    JNIEnv* env,
+    jobject,
+    jlong handle,
+    jlong id,
+    jlong timeout
+)
 {
     try
     {
         gpt::ble::manager::windows::apartment();
+        gpt::ble::manager::windows::OperationBudget budget(timeout);
         return gpt::ble::manager::windows::discoverGatt(env, handle, id);
     }
     catch (...)
@@ -247,12 +256,14 @@ JNIEXPORT jbyteArray JNICALL Java_gpt_ble_manager_windows_NativeBridge_read(
     jlong handle,
     jlong id,
     jint attribute,
-    jboolean descriptor
+    jboolean descriptor,
+    jlong timeout
 )
 {
     try
     {
         gpt::ble::manager::windows::apartment();
+        gpt::ble::manager::windows::OperationBudget budget(timeout);
         return gpt::ble::manager::windows::readAttribute(env, handle, id, attribute, descriptor);
     }
     catch (...)
@@ -270,12 +281,14 @@ JNIEXPORT void JNICALL Java_gpt_ble_manager_windows_NativeBridge_write(
     jint attribute,
     jboolean descriptor,
     jbyteArray data,
-    jboolean response
+    jboolean response,
+    jlong timeout
 )
 {
     try
     {
         gpt::ble::manager::windows::apartment();
+        gpt::ble::manager::windows::OperationBudget budget(timeout);
         gpt::ble::manager::windows::writeAttribute(
             env,
             handle,
@@ -298,12 +311,14 @@ JNIEXPORT void JNICALL Java_gpt_ble_manager_windows_NativeBridge_subscribe(
     jlong handle,
     jlong id,
     jint attribute,
-    jint mode
+    jint mode,
+    jlong timeout
 )
 {
     try
     {
         gpt::ble::manager::windows::apartment();
+        gpt::ble::manager::windows::OperationBudget budget(timeout);
         gpt::ble::manager::windows::configureSubscription(handle, id, attribute, mode);
     }
     catch (...)
@@ -324,6 +339,41 @@ Java_gpt_ble_manager_windows_NativeBridge_mtu(JNIEnv* env, jobject, jlong handle
     {
         gpt::ble::manager::windows::failure(env);
         return 23;
+    }
+}
+
+JNIEXPORT jboolean JNICALL
+Java_gpt_ble_manager_windows_NativeBridge_supportsPreferredParameters(JNIEnv* env, jobject)
+{
+    try
+    {
+        gpt::ble::manager::windows::apartment();
+        return gpt::ble::manager::windows::supportsPreferredParameters() ? JNI_TRUE : JNI_FALSE;
+    }
+    catch (...)
+    {
+        gpt::ble::manager::windows::failure(env);
+        return JNI_FALSE;
+    }
+}
+
+JNIEXPORT jint JNICALL Java_gpt_ble_manager_windows_NativeBridge_preferredParameters(
+    JNIEnv* env,
+    jobject,
+    jlong handle,
+    jlong id,
+    jint mode
+)
+{
+    try
+    {
+        gpt::ble::manager::windows::apartment();
+        return gpt::ble::manager::windows::requestPreferredParameters(handle, id, mode);
+    }
+    catch (...)
+    {
+        gpt::ble::manager::windows::failure(env);
+        return 0;
     }
 }
 }

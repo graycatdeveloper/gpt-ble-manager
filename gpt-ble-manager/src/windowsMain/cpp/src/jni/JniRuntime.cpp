@@ -1,5 +1,6 @@
 #include "jni/JniRuntime.hpp"
 #include "runtime/WinrtRuntime.hpp"
+#include <cwchar>
 #include <new>
 
 namespace gpt::ble::manager::windows
@@ -103,6 +104,8 @@ void failure(JNIEnv* env) noexcept
     }
     std::wstring message;
     jint gattStatus = -1;
+    jint hresultCode = 0;
+    bool hasHresult = false;
     try
     {
         throw;
@@ -114,7 +117,9 @@ void failure(JNIEnv* env) noexcept
     }
     catch (hresult_error const& error)
     {
-        message = error.message().c_str();
+        hresultCode = static_cast<jint>(error.code().value);
+        hasHresult = true;
+        message = describeHresult(hresultCode);
     }
     catch (std::exception const& error)
     {
@@ -126,6 +131,7 @@ void failure(JNIEnv* env) noexcept
     }
     auto cls = env->FindClass(
         gattStatus >= 0 ? "gpt/ble/manager/windows/WindowsGattException"
+        : hasHresult    ? "gpt/ble/manager/windows/WindowsHResultException"
                         : "java/lang/IllegalStateException"
     );
     if (!cls)
@@ -135,7 +141,7 @@ void failure(JNIEnv* env) noexcept
     auto constructor = env->GetMethodID(
         cls,
         "<init>",
-        gattStatus >= 0 ? "(ILjava/lang/String;)V" : "(Ljava/lang/String;)V"
+        (gattStatus >= 0 || hasHresult) ? "(ILjava/lang/String;)V" : "(Ljava/lang/String;)V"
     );
     if (!constructor)
     {
@@ -145,6 +151,7 @@ void failure(JNIEnv* env) noexcept
     auto msg = text(env, message);
     auto error = static_cast<jthrowable>(
         gattStatus >= 0 ? env->NewObject(cls, constructor, gattStatus, msg)
+        : hasHresult    ? env->NewObject(cls, constructor, hresultCode, msg)
                         : env->NewObject(cls, constructor, msg)
     );
     if (error)

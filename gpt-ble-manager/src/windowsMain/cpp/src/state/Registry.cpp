@@ -56,7 +56,7 @@ jlong createManager(JNIEnv* env, jobject self)
     owner->advertisement = env->GetMethodID(
         cls,
         "onAdvertisement",
-        "(JLjava/lang/String;Ljava/lang/String;IIZZ[Ljava/lang/String;[[B)V"
+        "(JLjava/lang/String;Ljava/lang/String;IIZZ[Ljava/lang/String;[[B[[B)V"
     );
     owner->scanStopped = env->GetMethodID(cls, "onScanStopped", "(JLjava/lang/String;)V");
     owner->knownDevice =

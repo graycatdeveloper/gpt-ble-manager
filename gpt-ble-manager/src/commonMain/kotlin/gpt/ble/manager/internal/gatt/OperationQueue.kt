@@ -10,7 +10,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 
 /**
@@ -29,32 +28,54 @@ internal class OperationQueue(private val onAbort: (BleException) -> Unit) {
         stopped.complete(error)
     }
 
-    suspend fun <T> execute(timeoutMillis: Long, block: suspend () -> T): T = mutex.withLock {
-        require(timeoutMillis > 0)
-        if (stopped.isCompleted) {
-            throw stopped.await()
-        }
+    suspend fun <T> execute(
+        timeoutMillis: Long,
+        queueWaitMillis: Long = 15_000,
+        block: suspend () -> T,
+    ): T {
+        require(timeoutMillis > 0 && queueWaitMillis > 0)
+        // Waiting cancellation/timeout does not invalidate the in-flight request.
+        // withTimeoutOrNull distinguishes this local deadline from a caller's outer timeout.
+        var acquired = false
         try {
-            withTimeout(timeoutMillis.milliseconds) {
-                coroutineScope {
-                    val operation = async { block() }
-                    select {
-                        operation.onAwait { it }
-                        stopped.onAwait { throw it }
+            val entered =
+                kotlinx.coroutines.withTimeoutOrNull(queueWaitMillis) {
+                    mutex.lock()
+                    acquired = true
+                    true
+                } ?: false
+            if (!entered) {
+                throw BleException(BleError.Timeout, "GATT queue wait timed out")
+            }
+            if (stopped.isCompleted) {
+                throw stopped.await()
+            }
+            try {
+                return withTimeout(timeoutMillis.milliseconds) {
+                    coroutineScope {
+                        val operation = async { block() }
+                        select {
+                            operation.onAwait { it }
+                            stopped.onAwait { throw it }
+                        }
                     }
                 }
+            } catch (e: TimeoutCancellationException) {
+                val error = BleException(BleError.Timeout, "GATT operation timed out", e)
+                stop(error)
+                onAbort(error)
+                throw error
+            } catch (e: CancellationException) {
+                val error =
+                    BleException(BleError.Disconnected, "In-flight GATT operation was cancelled", e)
+                stop(error)
+                onAbort(error)
+                throw e
             }
-        } catch (e: TimeoutCancellationException) {
-            val error = BleException(BleError.Timeout, "GATT operation timed out", e)
-            stop(error)
-            onAbort(error)
-            throw error
-        } catch (e: CancellationException) {
-            val error =
-                BleException(BleError.Disconnected, "In-flight GATT operation was cancelled", e)
-            stop(error)
-            onAbort(error)
-            throw e
+        } finally {
+            if (acquired) {
+                mutex.unlock()
+            }
         }
     }
 }

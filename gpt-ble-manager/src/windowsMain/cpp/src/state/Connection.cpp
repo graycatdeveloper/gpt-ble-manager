@@ -17,8 +17,10 @@ void Connection::close() noexcept
     std::map<int, std::pair<GattCharacteristic, event_token>> oldNotifications;
     std::vector<GattDeviceService> oldServices;
     event_token oldStatus{}, oldMtu{}, oldChanged{};
+    BluetoothLEPreferredConnectionParametersRequest oldPreferences{nullptr};
     {
         std::lock_guard lock(mutex);
+        oldPreferences = std::exchange(preferredParameters, nullptr);
         oldNotifications.swap(notifications);
         oldServices.swap(services);
         oldStatus = statusToken;
@@ -29,6 +31,16 @@ void Connection::close() noexcept
         servicesToken = {};
         characteristics.clear();
         descriptors.clear();
+    }
+    if (oldPreferences)
+    {
+        try
+        {
+            oldPreferences.Close();
+        }
+        catch (...)
+        {
+        }
     }
     try
     {

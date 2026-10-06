@@ -1,5 +1,6 @@
 #include "scan/Scanner.hpp"
 #include "bluetooth/BluetoothUtils.hpp"
+#include "runtime/WinrtRuntime.hpp"
 #include "scan/AdvertisementParser.hpp"
 #include "scan/KnownDevices.hpp"
 #include "state/Manager.hpp"
@@ -54,6 +55,30 @@ void startScan(jlong handle, jlong generation)
                             ->SetObjectArrayElement(manufacturerArray, static_cast<jsize>(i), item);
                         callbackEnv->DeleteLocalRef(item);
                     }
+                    // Preserve the AD type byte and full service-data payload for Kotlin.
+                    std::vector<std::vector<uint8_t>> serviceData;
+                    for (auto const& section : advertisement.DataSections())
+                    {
+                        const auto type = section.DataType();
+                        if (type == 0x16 || type == 0x20 || type == 0x21)
+                        {
+                            auto data = bytes(section.Data());
+                            data.insert(data.begin(), type);
+                            serviceData.push_back(std::move(data));
+                        }
+                    }
+                    auto serviceDataArray = callbackEnv->NewObjectArray(
+                        static_cast<jsize>(serviceData.size()),
+                        arrayClass,
+                        nullptr
+                    );
+                    for (size_t i = 0; i < serviceData.size(); ++i)
+                    {
+                        auto item = byteArray(callbackEnv, serviceData[i]);
+                        callbackEnv
+                            ->SetObjectArrayElement(serviceDataArray, static_cast<jsize>(i), item);
+                        callbackEnv->DeleteLocalRef(item);
+                    }
                     const auto type = args.AdvertisementType();
                     const bool connectable =
                         type == BluetoothLEAdvertisementType::ConnectableUndirected ||
@@ -79,7 +104,8 @@ void startScan(jlong handle, jlong generation)
                         static_cast<jboolean>(connectable),
                         static_cast<jboolean>(complete),
                         strings(callbackEnv, uuids),
-                        manufacturerArray
+                        manufacturerArray,
+                        serviceDataArray
                     );
                 }
             );
@@ -124,7 +150,7 @@ void startScan(jlong handle, jlong generation)
     }
     catch (hresult_error const& e)
     {
-        nameLookupFailed(weak, generation, e.message().c_str());
+        nameLookupFailed(weak, generation, describeHresult(e.code().value));
     }
     catch (std::exception const& e)
     {

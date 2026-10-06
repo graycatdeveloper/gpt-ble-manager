@@ -17,10 +17,16 @@ import gpt.ble.manager.BleError
 import gpt.ble.manager.BleException
 import gpt.ble.manager.ScanOptions
 import gpt.ble.manager.ScanState
+import gpt.ble.manager.internal.scan.ScanEventPublisher
 import gpt.ble.manager.internal.scan.ScanStore
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Owns BluetoothLeScanner and a single ScanCallback. Callback identity checks discard events after
@@ -46,6 +52,27 @@ internal class AndroidScanner(
     private var scanStore: ScanStore? = null
     val scanState = scanning.asStateFlow()
     val devices = found.asStateFlow()
+    private val publisher = ScanEventPublisher()
+    val scanEvents = publisher.events
+    val droppedScanEvents = publisher.dropped
+    private var expiry: Job? = null
+
+    private fun startExpiry(options: ScanOptions, store: ScanStore) {
+        val ttl = options.lostTimeoutMillis ?: return
+        expiry =
+            CoroutineScope(Dispatchers.Default).launch {
+                while (true) {
+                    delay(minOf(ttl, 1_000))
+                    synchronized(lock) {
+                        if (!scanning.value.scanning) {
+                            return@launch
+                        }
+                        store.expire()
+                        found.value = store.devices.value
+                    }
+                }
+            }
+    }
 
     fun updateGattName(address: String, name: String) =
         synchronized(lock) {
@@ -79,7 +106,7 @@ internal class AndroidScanner(
             stopScan()
             checkReady()
             found.value = emptyList()
-            val store = ScanStore(options)
+            val store = ScanStore(options, publisher::emit)
             scanStore = store
             if (options.includeKnownDevices) {
                 adapter
@@ -139,6 +166,7 @@ internal class AndroidScanner(
                     ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
                     activeCallback,
                 )
+                startExpiry(options, store)
             } catch (e: Exception) {
                 callback = null
                 scanner = null
@@ -160,6 +188,8 @@ internal class AndroidScanner(
 
     fun stopScan() =
         synchronized(lock) {
+            expiry?.cancel()
+            expiry = null
             val old = callback
             callback = null
             try {

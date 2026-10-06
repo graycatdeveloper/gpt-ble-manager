@@ -1,5 +1,6 @@
 package gpt.ble.manager
 
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -8,6 +9,26 @@ import kotlinx.coroutines.flow.StateFlow
  * values; the library publishes updates.
  */
 interface BleManager {
+    val capabilities: BleCapabilities
+        get() = BleCapabilities()
+
+    /** Connections owned by this manager; disconnected sessions are removed. */
+    val connections: StateFlow<List<BleConnection>>
+    /** Bounded live event stream. Subscribe before startScan; no replay to late subscribers. */
+    val scanEvents: SharedFlow<ScanEvent>
+    /** Number of events rejected because a subscriber could not keep up. */
+    val droppedScanEvents: StateFlow<Long>
+
+    fun connectionFor(address: String): BleConnection? =
+        connections.value.firstOrNull {
+            it.device.address.equals(address, ignoreCase = true)
+        }
+
+    /** Closes all currently registered sessions; the manager remains usable. */
+    fun disconnectAll() {
+        connections.value.toList().forEach { it.close() }
+    }
+
     val adapterState: StateFlow<AdapterState>
     val scanState: StateFlow<ScanState>
     val devices: StateFlow<List<BleDevice>>

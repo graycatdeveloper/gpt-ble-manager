@@ -19,5 +19,9 @@ enum class BleError {
 }
 
 /** BLE operation error with a portable [code] category and the original platform cause. */
-class BleException(val code: BleError, message: String, cause: Throwable? = null) :
-    Exception(message, cause)
+class BleException(
+    val code: BleError,
+    message: String,
+    cause: Throwable? = null,
+    val details: BleErrorDetails = BleErrorDetails(),
+) : Exception(message, cause)

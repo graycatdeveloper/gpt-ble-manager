@@ -14,12 +14,25 @@ internal fun IllegalStateException.asBleException(
         when {
             this is WindowsGattException ->
                 when (status) {
+                    1 -> BleError.Disconnected
                     3 -> BleError.PermissionDenied
                     2 -> BleError.Protocol
                     else -> BleError.NativeFailure
                 }
+            this is WindowsHResultException && hresult == 0x80070005.toInt() ->
+                BleError.PermissionDenied
             message?.startsWith("TIMEOUT:") == true -> BleError.Timeout
             else -> BleError.NativeFailure
         }
-    return BleException(code, message ?: fallbackMessage, this)
+    return BleException(
+        code,
+        message ?: fallbackMessage,
+        this,
+        gpt.ble.manager.BleErrorDetails(
+            platform = "Windows",
+            platformStatus =
+                (this as? WindowsGattException)?.status
+                    ?: (this as? WindowsHResultException)?.hresult,
+        ),
+    )
 }
